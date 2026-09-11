@@ -54,10 +54,14 @@ const PILLS = [
 ];
 
 export default function Home() {
+  const storeMode = useSastStore((s) => s.mode);
   const setMode = useSastStore((s) => s.setMode);
+  const setPaste = useSastStore((s) => s.setPaste);
+  const addNativeFiles = useSastStore((s) => s.addNativeFiles);
   const status = useSastStore((s) => s.status);
   const result = useSastStore((s) => s.result);
   const history = useSastStore((s) => s.history);
+  const pasteFilename = useSastStore((s) => s.pasteFilename);
   const loadFromStorage = useSastStore((s) => s.loadHistoryFromStorage);
   const loadResult = useSastStore((s) => s.loadHistoryResult);
   const nav = useNavigate();
@@ -68,9 +72,17 @@ export default function Home() {
     loadFromStorage();
   }, [loadFromStorage]);
 
+  // Sincroniza tab → store mode
   useEffect(() => {
     setMode(tab);
   }, [tab, setMode]);
+
+  // Sincroniza store mode → tab (cuando loadDemo() u otra pestaña cambian el modo)
+  useEffect(() => {
+    if (storeMode === "paste" || storeMode === "files") {
+      setTab(storeMode);
+    }
+  }, [storeMode]);
 
   // Live ticker para relative time
   const [, setTick] = useState(0);
@@ -320,16 +332,31 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <select
-                  defaultValue="source.py"
+                  value={pasteFilename || "source.py"}
+                  onChange={(e) => setPaste(useSastStore.getState().pasteValue, e.target.value)}
                   className="px-3 py-2 rounded-xl text-sm bg-white border border-surface-200 text-surface-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/30"
                 >
                   <option>source.py</option>
                   <option>app.py</option>
                   <option>main.py</option>
+                  <option>demo.py</option>
                 </select>
                 <label className="btn-secondary cursor-pointer">
                   <UploadCloud size={14} /> Subir archivo
-                  <input type="file" className="hidden" accept=".py,.pyw" multiple />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".py,.pyw"
+                    multiple
+                    onClick={() => {
+                      // Asegurarse cambiar a la tab de files antes de subir
+                      setTab("files");
+                    }}
+                    onChange={(e) => {
+                      const f = e.target.files;
+                      if (f && f.length) addNativeFiles(Array.from(f));
+                    }}
+                  />
                 </label>
               </div>
             </div>

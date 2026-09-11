@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSastStore } from "../store/sast";
 import {
   FileCode,
@@ -61,9 +61,12 @@ export default function Home() {
   const status = useSastStore((s) => s.status);
   const result = useSastStore((s) => s.result);
   const history = useSastStore((s) => s.history);
+  const pasteValue = useSastStore((s) => s.pasteValue);
   const pasteFilename = useSastStore((s) => s.pasteFilename);
+  const loadDemo = useSastStore((s) => s.loadDemo);
   const loadFromStorage = useSastStore((s) => s.loadHistoryFromStorage);
   const loadResult = useSastStore((s) => s.loadHistoryResult);
+  const analysisRef = useRef<HTMLDivElement | null>(null);
   const nav = useNavigate();
 
   const [tab, setTab] = useState<"paste" | "files">("paste");
@@ -83,6 +86,18 @@ export default function Home() {
       setTab(storeMode);
     }
   }, [storeMode]);
+
+  // Cuando loadDemo() se dispara (store), hacer scroll hasta la zona de análisis y asegurar tab "paste"
+  useEffect(() => {
+    const onDemo = () => {
+      setTab("paste");
+      try {
+        analysisRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch {}
+    };
+    window.addEventListener("sast:load-demo", onDemo);
+    return () => window.removeEventListener("sast:load-demo", onDemo);
+  }, []);
 
   // Live ticker para relative time
   const [, setTick] = useState(0);
@@ -310,123 +325,132 @@ export default function Home() {
         </section>
       )}
 
-      {/* ============ ANALYSIS SECTION ============ */}
-      {!(status === "ready" && result) && (
-        <section
-          className="grid lg:grid-cols-[1.4fr_.8fr] gap-6 animate-fade-up"
-          style={{ animationDelay: "120ms" }}
-        >
-          {/* LEFT: Editor tabs + editor/dropzone */}
-          <div className="space-y-4">
-            <div className="card p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700">
-                <FileCode size={18} strokeWidth={2.2} />
+      {/* ============ ANALYSIS SECTION (SIEMPRE VISIBLE) ============ */}
+      <section
+        ref={analysisRef}
+        id="analysis-editor"
+        className="grid lg:grid-cols-[1.4fr_.8fr] gap-6 animate-fade-up scroll-mt-24"
+        style={{ animationDelay: "120ms" }}
+      >
+        {/* LEFT: Editor tabs + editor/dropzone */}
+        <div className="space-y-4">
+          <div className="card p-3 flex items-center gap-3 flex-wrap">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 shrink-0">
+              <FileCode size={18} strokeWidth={2.2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-display font-bold text-[16px] text-surface-900 leading-tight">
+                Editor de código
               </div>
-              <div className="flex-1">
-                <div className="font-display font-bold text-[16px] text-surface-900 leading-tight">
-                  Editor de código
-                </div>
-                <div className="text-[12px] text-surface-500">
-                  Pega tu fuente o sube un archivo .py y obtén resultados en segundos.
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={pasteFilename || "source.py"}
-                  onChange={(e) => setPaste(useSastStore.getState().pasteValue, e.target.value)}
-                  className="px-3 py-2 rounded-xl text-sm bg-white border border-surface-200 text-surface-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                >
-                  <option>source.py</option>
-                  <option>app.py</option>
-                  <option>main.py</option>
-                  <option>demo.py</option>
-                </select>
-                <label className="btn-secondary cursor-pointer">
-                  <UploadCloud size={14} /> Subir archivo
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".py,.pyw"
-                    multiple
-                    onClick={() => {
-                      // Asegurarse cambiar a la tab de files antes de subir
-                      setTab("files");
-                    }}
-                    onChange={(e) => {
-                      const f = e.target.files;
-                      if (f && f.length) addNativeFiles(Array.from(f));
-                    }}
-                  />
-                </label>
+              <div className="text-[12px] text-surface-500 truncate">
+                Pega tu fuente o sube un archivo .py y obtén resultados en segundos.
               </div>
             </div>
-
-            <div className="card p-2 flex gap-2 bg-surface-50">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setTab("paste")}
-                className={`flex-1 rounded-xl py-2.5 px-4 text-sm font-semibold transition flex items-center justify-center gap-2 ${
-                  tab === "paste"
-                    ? "bg-white text-surface-900 shadow-soft border border-surface-200"
-                    : "text-surface-500 hover:text-surface-800"
-                }`}
+                type="button"
+                onClick={() => loadDemo()}
+                className="px-3 py-2 rounded-xl text-[13px] font-bold transition bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 hover:text-primary-800 shadow-soft inline-flex items-center gap-1.5 active:scale-95"
+                title="Rellena el editor con un ejemplo Flask con 11 vulnerabilidades reales para probar el SAST al instante"
               >
-                <Code2 size={15} /> Pegar código
+                <Sparkles size={14} /> Cargar ejemplo demo
               </button>
-              <button
-                onClick={() => setTab("files")}
-                className={`flex-1 rounded-xl py-2.5 px-4 text-sm font-semibold transition flex items-center justify-center gap-2 ${
-                  tab === "files"
-                    ? "bg-white text-surface-900 shadow-soft border border-surface-200"
-                    : "text-surface-500 hover:text-surface-800"
-                }`}
+              <select
+                value={pasteFilename || "source.py"}
+                onChange={(e) => setPaste(useSastStore.getState().pasteValue, e.target.value)}
+                className="px-3 py-2 rounded-xl text-sm bg-white border border-surface-200 text-surface-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/30"
               >
-                <FolderClosed size={15} /> Subir archivo
-              </button>
-            </div>
-
-            <div className="overflow-hidden">
-              {tab === "paste" ? (
-                <div className="card overflow-hidden">
-                  <CodeEditor />
-                </div>
-              ) : (
-                <div className="p-1">
-                  <Dropzone />
-                </div>
-              )}
-
-              {/* Secondary action bar below editor */}
-              <div className="mt-4 flex items-center justify-between gap-3 px-2 flex-wrap">
-                <div className="flex items-center gap-4 text-[12px] text-surface-500 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5">
-                    <FileCode size={13} /> Líneas: <b className="text-surface-700">15</b>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Sparkles size={13} /> Python
-                  </span>
-                </div>
-                <button
-                  className="btn-primary"
-                  onClick={() => useSastStore.getState().runScan()}
-                >
-                  <Play size={14} fill="currentColor" /> Analizar código
-                </button>
-              </div>
+                <option>source.py</option>
+                <option>app.py</option>
+                <option>main.py</option>
+                <option>demo.py</option>
+              </select>
+              <label className="btn-secondary cursor-pointer">
+                <UploadCloud size={14} /> Subir archivo
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".py,.pyw"
+                  multiple
+                  onClick={() => setTab("files")}
+                  onChange={(e) => {
+                    const f = e.target.files;
+                    if (f && f.length) addNativeFiles(Array.from(f));
+                  }}
+                />
+              </label>
             </div>
           </div>
 
-          {/* RIGHT: Config + Recent */}
-          <div className="space-y-5">
-            <div>
-              <div className="flex items-center justify-between mb-3 px-1">
-                <div>
-                  <div className="font-display font-bold text-[15px] text-surface-900">
-                    Configuración del análisis
-                  </div>
+          <div className="card p-2 flex gap-2 bg-surface-50">
+            <button
+              onClick={() => setTab("paste")}
+              className={`flex-1 rounded-xl py-2.5 px-4 text-sm font-semibold transition flex items-center justify-center gap-2 ${
+                tab === "paste"
+                  ? "bg-white text-surface-900 shadow-soft border border-surface-200"
+                  : "text-surface-500 hover:text-surface-800"
+              }`}
+            >
+              <Code2 size={15} /> Pegar código
+            </button>
+            <button
+              onClick={() => setTab("files")}
+              className={`flex-1 rounded-xl py-2.5 px-4 text-sm font-semibold transition flex items-center justify-center gap-2 ${
+                tab === "files"
+                  ? "bg-white text-surface-900 shadow-soft border border-surface-200"
+                  : "text-surface-500 hover:text-surface-800"
+              }`}
+            >
+              <FolderClosed size={15} /> Subir archivo
+            </button>
+          </div>
+
+          <div className="overflow-hidden">
+            {tab === "paste" ? (
+              <CodeEditor />
+            ) : (
+              <div className="p-1">
+                <Dropzone />
+              </div>
+            )}
+
+            {/* Secondary action bar below editor */}
+            <div className="mt-4 flex items-center justify-between gap-3 px-2 flex-wrap">
+              <div className="flex items-center gap-4 text-[12px] text-surface-500 flex-wrap">
+                <span className="inline-flex items-center gap-1.5">
+                  <FileCode size={13} /> Líneas: <b className="text-surface-700">{pasteValue ? pasteValue.split("\n").length : 0}</b>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Sparkles size={13} /> Python · {pasteFilename || "source.py"}
+                </span>
+                {pasteValue && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 size={12} className="text-success-600" /> Código cargado
+                  </span>
+                )}
+              </div>
+              <button
+                className="btn-primary"
+                onClick={() => useSastStore.getState().runScan()}
+              >
+                <Play size={14} fill="currentColor" /> Analizar código
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Config + Recent */}
+        <div className="space-y-5">
+          <div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div>
+                <div className="font-display font-bold text-[15px] text-surface-900">
+                  Configuración del análisis
                 </div>
               </div>
-              <ScanOptions />
             </div>
+            <ScanOptions />
+          </div>
 
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
@@ -534,7 +558,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-      )}
 
       {/* ============ RESULTS ============ */}
       {status === "ready" && result && (

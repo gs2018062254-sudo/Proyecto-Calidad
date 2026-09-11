@@ -55,7 +55,7 @@ export default function Dropzone() {
           type="file"
           className="hidden"
           multiple
-          accept=".py,.pyw"
+          accept=".py,.pyw,.js,.jsx,.ts,.tsx,.php,.java,.go,.cs,.cpp,.c,.rb,.rs,.sql"
           onChange={(e) => onFiles(e.target.files)}
         />
 
@@ -63,15 +63,14 @@ export default function Dropzone() {
           <CloudUpload size={20} strokeWidth={1.8} />
         </div>
         <div className="font-display font-semibold text-white text-sm">
-          Arrastra tu archivo Python aquí
+          Arrastra tus archivos de código aquí
         </div>
         <div className="text-xs text-[var(--studio-text-secondary)] mt-1">
-          o haz clic para explorar en el sistema de archivos
+          o haz clic para seleccionar de tu equipo
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-          <span className="studio-badge">.py</span>
-          <span className="studio-badge">.pyw</span>
-          <span className="studio-badge">Límite 5 MB</span>
+          <span className="studio-badge">Python · JS / TS · PHP · Java · Go</span>
+          <span className="studio-badge">Hasta 5 MB</span>
         </div>
       </div>
 

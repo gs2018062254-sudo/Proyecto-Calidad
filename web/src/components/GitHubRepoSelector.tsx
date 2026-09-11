@@ -93,17 +93,13 @@ export default function GitHubRepoSelector() {
         <ShieldCheck size={20} className="shrink-0 text-emerald-400 mt-0.5" />
         <div className="space-y-1">
           <div className="font-display font-bold text-emerald-300 flex items-center gap-2">
-            <span>Seguridad Zero-Credential Activa</span>
+            <span>Escaneo seguro y privado</span>
             <span className="studio-badge !py-0.5 !px-2 text-emerald-400 border-emerald-800/50 bg-emerald-900/30">
-              Protección de Privacidad
+              Sin credenciales
             </span>
           </div>
           <p className="text-slate-300">
-            Por directivas de seguridad y para proteger tus credenciales contra filtraciones,{" "}
-            <b>no solicitamos ni almacenamos tokens personales ni contraseñas de GitHub</b>. Puedes
-            escanear libremente cualquier repositorio público ingresando su URL o nombre de proyecto.
-            El análisis se ejecuta en un entorno temporal aislado en memoria con mitigación estricta
-            contra ataques de evasión de directorios (Zip Slip).
+            Analiza cualquier repositorio público sin compartir tokens ni contraseñas. El escaneo se procesa de forma aislada y segura en memoria.
           </p>
         </div>
       </div>
@@ -130,12 +126,12 @@ export default function GitHubRepoSelector() {
                 Analizador de Repositorios GitHub
               </h2>
               <p className="text-xs font-mono text-[var(--studio-text-secondary)]">
-                Inspección estática de código multilingüe directo desde el repositorio
+                Auditoría de seguridad directamente desde el repositorio público
               </p>
             </div>
           </div>
           <span className="studio-badge text-blue-400 border-blue-900/40 bg-blue-950/20 self-start sm:self-auto">
-            <Globe size={11} /> Conexión Directa a GitHub API
+            <Globe size={11} /> Conexión Directa
           </span>
         </div>
 
@@ -144,7 +140,7 @@ export default function GitHubRepoSelector() {
           <div className="grid md:grid-cols-3 gap-3">
             <div className="md:col-span-2 space-y-1.5">
               <label className="text-xs font-mono font-semibold text-slate-300 flex items-center justify-between">
-                <span>URL o Propietario / Repositorio:</span>
+                <span>Repositorio o URL de GitHub:</span>
                 <span className="text-[11px] font-normal text-slate-500">
                   Ej: NestorSnIbz/skinbridge-creator-tools
                 </span>
@@ -153,7 +149,7 @@ export default function GitHubRepoSelector() {
                 type="text"
                 value={publicUrlInput}
                 onChange={(e) => setPublicUrlInput(e.target.value)}
-                placeholder="https://github.com/propietario/repositorio o propietario/repositorio"
+                placeholder="https://github.com/usuario/repositorio o usuario/repositorio"
                 className="w-full studio-input text-xs font-mono py-2.5"
                 disabled={status === "loading"}
                 autoFocus
@@ -163,7 +159,7 @@ export default function GitHubRepoSelector() {
             <div className="space-y-1.5">
               <label className="text-xs font-mono font-semibold text-slate-300 flex items-center gap-1.5">
                 <GitBranch size={13} className="text-slate-400" />
-                <span>Rama o Tag (Ref):</span>
+                <span>Rama:</span>
               </label>
               <input
                 type="text"
@@ -182,7 +178,7 @@ export default function GitHubRepoSelector() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
             <div className="text-[11px] font-mono text-[var(--studio-text-secondary)] flex items-center gap-1.5">
               <Sparkles size={12} className="text-amber-400" />
-              <span>Soporta cualquier lenguaje: TypeScript, JavaScript, Python, PHP, Java, etc.</span>
+              <span>Compatible con TypeScript, JavaScript, Python, PHP, Java, Go y más</span>
             </div>
 
             <button
@@ -191,7 +187,7 @@ export default function GitHubRepoSelector() {
               className="studio-btn-primary !text-xs !py-2.5 !px-5 w-full sm:w-auto shrink-0 !justify-center"
             >
               <Play size={13} fill="currentColor" />
-              {status === "loading" ? "Descargando y analizando repositorio…" : "Escanear Repositorio Ahora"}
+              {status === "loading" ? "Analizando repositorio…" : "Escanear repositorio"}
             </button>
           </div>
         </form>
@@ -199,7 +195,7 @@ export default function GitHubRepoSelector() {
         {/* Ejemplos de Proyectos para Pruebas Rápidas */}
         <div className="pt-4 border-t border-[var(--studio-border)] space-y-2.5">
           <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--studio-text-faint)]">
-            Proyectos sugeridos para prueba inmediata:
+            Ejemplos rápidos para probar:
           </span>
           <div className="grid sm:grid-cols-2 gap-2.5">
             {POPULAR_EXAMPLES.map((ex) => (
@@ -234,7 +230,7 @@ export default function GitHubRepoSelector() {
       <div className="p-4 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] space-y-3">
         <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-200">
           <Code2 size={14} className="text-blue-400" />
-          <span>Lenguajes y Tecnologías Soportadas por el Motor SAST:</span>
+          <span>Lenguajes compatibles:</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {SUPPORTED_LANGS.map((lang) => (

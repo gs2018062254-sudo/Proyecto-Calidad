@@ -102,10 +102,9 @@ export default function Home() {
       {/* ============ STUDIO CONSOLE HEADER & HUD ============ */}
       <section className="studio-console-header">
         <div className="studio-title-group">
-          <h1>Consola de Análisis Estático de Código</h1>
+          <h1>Auditoría de Seguridad de Código</h1>
           <p>
-            Auditoría sintáctica de código Python y trazabilidad de flujo de datos
-            (AST & Taint Analysis) para detección de inyecciones SQL, RCE y fallos OWASP/CWE.
+            Detecta vulnerabilidades, inyecciones SQL, fallos OWASP y brechas de seguridad en tu código y repositorios.
           </p>
         </div>
 
@@ -181,9 +180,9 @@ export default function Home() {
                     <option>demo.py</option>
                   </select>
                 ) : mode === "files" ? (
-                  <span>Archivos .py / .pyw</span>
+                  <span>Archivos locales</span>
                 ) : (
-                  <span>GitHub Repository Scanner</span>
+                  <span>Repositorio GitHub</span>
                 )}
               </span>
             </div>
@@ -194,7 +193,7 @@ export default function Home() {
                 type="button"
                 onClick={() => loadDemo()}
                 className="studio-btn-accent"
-                title="Cargar demo vulnerable con inyecciones SQL y RCE"
+                title="Cargar código de ejemplo con vulnerabilidades"
               >
                 <Sparkles size={12} /> Cargar demo
               </button>
@@ -203,7 +202,7 @@ export default function Home() {
                 <input
                   type="file"
                   className="hidden"
-                  accept=".py,.pyw"
+                  accept=".py,.pyw,.js,.jsx,.ts,.tsx,.php,.java,.go,.cs,.cpp,.c,.rb,.rs,.sql"
                   multiple
                   onClick={() => setMode("files")}
                   onChange={(e) => {
@@ -248,7 +247,7 @@ export default function Home() {
               <span>UTF-8</span>
               <span className="text-[var(--studio-border)]">|</span>
               <span className="inline-flex items-center gap-1 text-emerald-400">
-                <CheckCircle2 size={11} /> Motor Python 3.10+
+                <CheckCircle2 size={11} /> Motor de análisis activo
               </span>
             </div>
             <button

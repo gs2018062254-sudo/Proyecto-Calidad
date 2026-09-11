@@ -17,6 +17,7 @@ import {
 import { useSastStore } from "../store/sast";
 import CodeEditor from "../components/CodeEditor";
 import Dropzone from "../components/Dropzone";
+import GitHubRepoSelector, { GitHubIcon } from "../components/GitHubRepoSelector";
 import ScanOptions from "../components/ScanOptions";
 import ScanProgress from "../components/ScanProgress";
 import SummaryCards from "../components/SummaryCards";
@@ -156,6 +157,12 @@ export default function Home() {
               >
                 <FolderClosed size={13} /> Subir archivo
               </button>
+              <button
+                onClick={() => setMode("github")}
+                className={`studio-tab-btn ${mode === "github" ? "active" : ""}`}
+              >
+                <GitHubIcon size={13} /> Repositorio GitHub
+              </button>
             </div>
 
             {/* Active file indicator */}
@@ -173,8 +180,10 @@ export default function Home() {
                     <option>main.py</option>
                     <option>demo.py</option>
                   </select>
-                ) : (
+                ) : mode === "files" ? (
                   <span>Archivos .py / .pyw</span>
+                ) : (
+                  <span>GitHub Repository Scanner</span>
                 )}
               </span>
             </div>
@@ -210,20 +219,31 @@ export default function Home() {
           <div className="flex-1 min-h-[480px] bg-[#070b14]">
             {mode === "paste" ? (
               <CodeEditor />
-            ) : (
+            ) : mode === "files" ? (
               <div className="p-4">
                 <Dropzone />
               </div>
+            ) : (
+              <GitHubRepoSelector />
             )}
           </div>
 
           {/* Studio Bottom Status Tray */}
           <div className="studio-statusbar">
             <div className="flex items-center gap-3 text-xs font-mono text-[var(--studio-text-secondary)] flex-wrap">
-              <span className="inline-flex items-center gap-1.5">
-                <FileCode size={12} className="text-blue-400" /> Líneas:{" "}
-                <b className="text-slate-100">{lines}</b>
-              </span>
+              {mode === "github" ? (
+                <span className="inline-flex items-center gap-1.5 text-blue-400">
+                  <GitHubIcon size={12} /> Origen:{" "}
+                  <b className="text-slate-100">
+                    {useSastStore.getState().selectedRepo?.full_name || useSastStore.getState().githubPublicRepoInput || "GitHub"}
+                  </b>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <FileCode size={12} className="text-blue-400" /> Líneas:{" "}
+                  <b className="text-slate-100">{lines}</b>
+                </span>
+              )}
               <span className="text-[var(--studio-border)]">|</span>
               <span>UTF-8</span>
               <span className="text-[var(--studio-border)]">|</span>
@@ -233,10 +253,11 @@ export default function Home() {
             </div>
             <button
               className="studio-btn-primary"
-              onClick={() => useSastStore.getState().runScan()}
+              onClick={() => (mode === "github" ? useSastStore.getState().runGitHubScan() : useSastStore.getState().runScan())}
               disabled={status === "loading"}
             >
-              <Play size={13} fill="currentColor" /> Analizar código
+              <Play size={13} fill="currentColor" /> Analizar
+              {mode === "paste" ? " código" : mode === "files" ? " archivos" : " repositorio"}
             </button>
           </div>
         </div>

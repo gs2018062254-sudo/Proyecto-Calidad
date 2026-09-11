@@ -90,7 +90,31 @@ export interface RuleDto {
   recommendation?: string;
 }
 
-export type ScanMode = "paste" | "files";
+export type ScanMode = "paste" | "files" | "github";
+
+export interface GitHubUser {
+  id: number;
+  login: string;
+  name: string;
+  avatar_url: string;
+  html_url: string;
+  public_repos: number;
+  total_private_repos?: number;
+}
+
+export interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  html_url: string;
+  description: string;
+  language: string;
+  default_branch: string;
+  stargazers_count: number;
+  forks_count?: number;
+  updated_at?: string;
+}
 
 export type ScanStatus = "idle" | "loading" | "error" | "ready";
 

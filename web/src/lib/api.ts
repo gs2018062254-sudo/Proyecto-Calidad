@@ -89,3 +89,70 @@ export function downloadFile(filename: string, content: string, mime: string) {
     URL.revokeObjectURL(url);
   }, 100);
 }
+
+// ==========================================
+// GitHub Integration Endpoints
+// ==========================================
+
+export async function fetchGitHubUser(token: string): Promise<import("../types").GitHubUser> {
+  const res = await request<{ ok: boolean; user: import("../types").GitHubUser }>("/api/github/user", {
+    headers: {
+      Authorization: `Bearer ${token.trim()}`,
+    },
+  });
+  return res.user;
+}
+
+export async function fetchGitHubRepos(
+  token?: string,
+  username?: string,
+  page: number = 1,
+): Promise<import("../types").GitHubRepo[]> {
+  const headers: Record<string, string> = {};
+  if (token && token.trim()) {
+    headers.Authorization = `Bearer ${token.trim()}`;
+  }
+  const q = new URLSearchParams();
+  if (username) q.set("username", username.trim());
+  q.set("page", String(page));
+  q.set("per_page", "50");
+
+  const res = await request<{ ok: boolean; repos: import("../types").GitHubRepo[] }>(
+    `/api/github/repos?${q.toString()}`,
+    { headers },
+  );
+  return res.repos || [];
+}
+
+export interface GitHubScanParams {
+  repo: string;
+  branch?: string;
+  token?: string;
+  min_confidence?: number;
+  min_severity?: string;
+  exclude_tests?: boolean;
+  include_sarif?: boolean;
+  include_html?: boolean;
+}
+
+export async function runGitHubScan(p: GitHubScanParams): Promise<ScanResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (p.token && p.token.trim()) {
+    headers.Authorization = `Bearer ${p.token.trim()}`;
+  }
+
+  return request<ScanResponse>("/api/github/scan", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      repo: p.repo,
+      branch: p.branch,
+      token: p.token,
+      min_confidence: p.min_confidence,
+      min_severity: p.min_severity,
+      exclude_tests: p.exclude_tests,
+      include_sarif: p.include_sarif,
+      include_html: p.include_html,
+    }),
+  });
+}

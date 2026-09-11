@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type {
   FindingDto,
+  GitHubRepo,
+  GitHubUser,
   HistoryEntry,
   ScanMode,
   ScanOptions,
@@ -9,7 +11,13 @@ import type {
   Severity,
   UploadedFile,
 } from "../types";
-import { runScan, downloadFile } from "../lib/api";
+import {
+  runScan,
+  downloadFile,
+  fetchGitHubUser,
+  fetchGitHubRepos,
+  runGitHubScan as apiRunGitHubScan,
+} from "../lib/api";
 import { DEMO_SOURCE } from "../lib/demo";
 import { formatForFilename, nowISO } from "../lib/datetime";
 
@@ -17,6 +25,8 @@ export type ProgressStage = 0 | 1 | 2 | 3;
 
 const LS_HISTORY_KEY = "sast.history.v1";
 const LS_OPTIONS_KEY = "sast.options.v1";
+const LS_GITHUB_TOKEN_KEY = "sast.github.token";
+const LS_GITHUB_USER_KEY = "sast.github.user";
 const BROADCAST_CH = "sast-realtime-sync";
 
 type BroadcastMsg =
@@ -92,6 +102,35 @@ function saveHistoryPersisted(list: HistoryEntry[]) {
   } catch {}
 }
 
+function loadGithubToken(): string | null {
+  try {
+    return localStorage.getItem(LS_GITHUB_TOKEN_KEY);
+  } catch {}
+  return null;
+}
+
+function saveGithubToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(LS_GITHUB_TOKEN_KEY, token);
+    else localStorage.removeItem(LS_GITHUB_TOKEN_KEY);
+  } catch {}
+}
+
+function loadGithubUser(): GitHubUser | null {
+  try {
+    const raw = localStorage.getItem(LS_GITHUB_USER_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveGithubUser(user: GitHubUser | null) {
+  try {
+    if (user) localStorage.setItem(LS_GITHUB_USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(LS_GITHUB_USER_KEY);
+  } catch {}
+}
+
 function buildFindingKey(f: FindingDto, idx: number) {
   return `${f.file_path}:${f.line}:${f.rule_id}:${idx}`;
 }
@@ -112,6 +151,22 @@ export interface SastStore {
   activeFile: string;
   history: HistoryEntry[];
   startedAt?: string;
+  // GitHub integration state & actions
+  githubToken: string | null;
+  githubUser: GitHubUser | null;
+  githubRepos: GitHubRepo[];
+  githubLoading: boolean;
+  githubError: string | null;
+  selectedRepo: GitHubRepo | null;
+  selectedBranch: string;
+  githubPublicRepoInput: string;
+  setGithubPublicRepoInput: (url: string) => void;
+  loginGithubWithToken: (token: string) => Promise<void>;
+  logoutGithub: () => void;
+  fetchGithubRepos: (username?: string) => Promise<void>;
+  setSelectedRepo: (repo: GitHubRepo | null) => void;
+  setSelectedBranch: (branch: string) => void;
+  runGitHubScan: (repoInput?: string, branchInput?: string) => Promise<void>;
   // actions
   setMode: (m: ScanMode) => void;
   setPaste: (v: string, filename?: string) => void;
@@ -178,10 +233,19 @@ export const useSastStore = create<SastStore>((set, get) => {
     expandedFindingId: null,
     activeFile: "",
     history: loadHistoryPersisted(),
+    // GitHub initial state
+    githubToken: loadGithubToken(),
+    githubUser: loadGithubUser(),
+    githubRepos: [],
+    githubLoading: false,
+    githubError: null,
+    selectedRepo: null,
+    selectedBranch: "main",
+    githubPublicRepoInput: "",
 
     setMode: (m) => {
       try {
-        if (m !== "paste" && m !== "files") return;
+        if (m !== "paste" && m !== "files" && m !== "github") return;
         set({ mode: m });
       } catch {}
     },
@@ -504,6 +568,163 @@ export const useSastStore = create<SastStore>((set, get) => {
         }
       } catch (e: any) {
         alert("No se pudo generar el reporte HTML: " + e.message);
+      }
+    },
+
+    // ==========================================
+    // GitHub integration actions
+    // ==========================================
+    setGithubPublicRepoInput: (url: string) => set({ githubPublicRepoInput: url, githubError: null }),
+
+    setSelectedRepo: (repo: GitHubRepo | null) =>
+      set({
+        selectedRepo: repo,
+        selectedBranch: repo?.default_branch || "main",
+        githubError: null,
+      }),
+
+    setSelectedBranch: (branch: string) => set({ selectedBranch: branch }),
+
+    loginGithubWithToken: async (token: string) => {
+      const cleanToken = token.trim();
+      if (!cleanToken) return;
+      set({ githubLoading: true, githubError: null });
+      try {
+        const user = await fetchGitHubUser(cleanToken);
+        saveGithubToken(cleanToken);
+        saveGithubUser(user);
+        set({ githubToken: cleanToken, githubUser: user, githubLoading: false });
+        get().fetchGithubRepos();
+      } catch (err: any) {
+        set({
+          githubLoading: false,
+          githubError: err?.message || "Error al autenticar con el token de GitHub.",
+        });
+      }
+    },
+
+    logoutGithub: () => {
+      saveGithubToken(null);
+      saveGithubUser(null);
+      set({
+        githubToken: null,
+        githubUser: null,
+        githubRepos: [],
+        selectedRepo: null,
+        githubError: null,
+      });
+    },
+
+    fetchGithubRepos: async (username?: string) => {
+      const { githubToken } = get();
+      set({ githubLoading: true, githubError: null });
+      try {
+        const repos = await fetchGitHubRepos(githubToken || undefined, username);
+        set({ githubRepos: repos, githubLoading: false });
+      } catch (err: any) {
+        set({
+          githubLoading: false,
+          githubError: err?.message || "Error al cargar repositorios de GitHub.",
+        });
+      }
+    },
+
+    runGitHubScan: async (repoInput?: string, branchInput?: string) => {
+      const st = get();
+      if (st.status === "loading") return;
+
+      const targetRepo =
+        repoInput?.trim() ||
+        st.selectedRepo?.full_name ||
+        st.githubPublicRepoInput.trim();
+
+      const targetBranch =
+        branchInput?.trim() ||
+        st.selectedBranch ||
+        st.selectedRepo?.default_branch ||
+        "main";
+
+      if (!targetRepo) {
+        set({ githubError: "Por favor selecciona un repositorio o ingresa el nombre/URL del proyecto." });
+        return;
+      }
+
+      set({
+        status: "loading",
+        progressStage: 0,
+        error: undefined,
+        result: null,
+        startedAt: nowISO(),
+        githubError: null,
+      });
+
+      const timers: number[] = [];
+      timers.push(window.setTimeout(() => set({ progressStage: 1 }), 300));
+      timers.push(window.setTimeout(() => set({ progressStage: 2 }), 1000));
+      timers.push(window.setTimeout(() => set({ progressStage: 3 }), 2000));
+
+      try {
+        const res = await apiRunGitHubScan({
+          repo: targetRepo,
+          branch: targetBranch,
+          token: st.githubToken || undefined,
+          min_confidence: st.options.min_confidence,
+          min_severity:
+            st.options.min_severity === "all" || st.options.min_severity === "info"
+              ? undefined
+              : st.options.min_severity,
+          exclude_tests: st.options.exclude_tests,
+          include_sarif: st.options.report_formats.includes("sarif"),
+          include_html: st.options.report_formats.includes("html"),
+        });
+
+        const timestamped: ScanResponse = {
+          ...res,
+          timestamp: res.timestamp || nowISO(),
+          timezone: res.timezone || "UTC",
+        };
+
+        const firstFile =
+          res.findings[0]?.file_path ??
+          Object.keys(res.sources || {})[0] ??
+          "";
+
+        const entry: HistoryEntry = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          created_at: timestamped.timestamp || nowISO(),
+          target: timestamped.target,
+          mode: "github",
+          files: timestamped.files_scanned,
+          duration_ms: timestamped.duration_ms,
+          summary: timestamped.summary,
+          severity_max: maxSeverityFromFindings(timestamped.findings),
+          severity_count: totalSeverities(timestamped.summary),
+          result: timestamped,
+        };
+
+        const nextHistory = [entry, ...get().history].slice(0, 200);
+        saveHistoryPersisted(nextHistory);
+        try {
+          bc?.postMessage({ type: "history:changed", sentAt: nowISO() } as BroadcastMsg);
+        } catch {}
+
+        set({
+          result: timestamped,
+          status: "ready",
+          activeFile: firstFile,
+          progressStage: 3,
+          expandedFindingId: null,
+          history: nextHistory,
+        });
+      } catch (err: any) {
+        set({
+          status: "error",
+          error: err?.message || String(err),
+          githubError: err?.message || String(err),
+          progressStage: 0,
+        });
+      } finally {
+        timers.forEach((t) => clearTimeout(t));
       }
     },
   };

@@ -6,6 +6,7 @@ from flask import Blueprint
 from .controllers.health_controller import HealthController
 from .controllers.rules_controller import RulesController
 from .controllers.scan_controller import ScanController
+from .controllers.github_controller import GitHubController
 
 api_bp = Blueprint("api", __name__)
 
@@ -26,3 +27,19 @@ def rules():
 @api_bp.route("/scan", methods=["POST"])
 def scan():
     return ScanController.scan()
+
+
+# Endpoints de integración con GitHub
+@api_bp.route("/api/github/user", methods=["GET"])
+def github_user():
+    return GitHubController.get_user()
+
+
+@api_bp.route("/api/github/repos", methods=["GET"])
+def github_repos():
+    return GitHubController.list_repos()
+
+
+@api_bp.route("/api/github/scan", methods=["POST"])
+def github_scan():
+    return GitHubController.scan_repo()

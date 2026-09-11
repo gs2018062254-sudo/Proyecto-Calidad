@@ -36,10 +36,15 @@ export default function ScanOptions() {
   const setOption = useSastStore((s) => s.setOption);
   const status = useSastStore((s) => s.status);
   const run = useSastStore((s) => s.runScan);
+  const runGitHubScan = useSastStore((s) => s.runGitHubScan);
   const reset = useSastStore((s) => s.reset);
   const mode = useSastStore((s) => s.mode);
-  const hasContent = useSastStore(
-    (s) => s.pasteValue.length > 0 || s.nativeFiles.length > 0,
+  const hasContent = useSastStore((s) =>
+    s.mode === "paste"
+      ? s.pasteValue.length > 0
+      : s.mode === "files"
+      ? s.nativeFiles.length > 0
+      : Boolean(s.selectedRepo || s.githubPublicRepoInput.trim().length > 0),
   );
   const result = useSastStore((s) => s.result);
 
@@ -201,14 +206,14 @@ export default function ScanOptions() {
         <button
           className="studio-btn-primary flex-1 !justify-center"
           disabled={status === "loading" || !hasContent}
-          onClick={() => run()}
+          onClick={() => (mode === "github" ? runGitHubScan() : run())}
         >
           {status === "loading" ? (
             <>Analizando código…</>
           ) : (
             <>
               <Play size={13} fill="currentColor" /> Analizar
-              {mode === "paste" ? " código" : " archivos"}
+              {mode === "paste" ? " código" : mode === "files" ? " archivos" : " repositorio"}
             </>
           )}
         </button>

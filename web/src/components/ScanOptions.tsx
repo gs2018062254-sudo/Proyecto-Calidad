@@ -16,7 +16,6 @@ export default function ScanOptions() {
   const status = useSastStore((s) => s.status);
   const run = useSastStore((s) => s.runScan);
   const reset = useSastStore((s) => s.reset);
-  const loadDemo = useSastStore((s) => s.loadDemo);
   const mode = useSastStore((s) => s.mode);
   const hasContent =
     useSastStore((s) => s.pasteValue.length > 0) ||
@@ -123,13 +122,6 @@ export default function ScanOptions() {
               {mode === "paste" ? " código" : " archivos"}
             </>
           )}
-        </button>
-        <button
-          className="btn-ghost"
-          onClick={loadDemo}
-          disabled={status === "loading"}
-        >
-          ✨ Demo
         </button>
         {result && (
           <button className="btn-ghost" onClick={reset}>

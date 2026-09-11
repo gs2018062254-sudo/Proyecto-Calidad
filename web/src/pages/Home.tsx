@@ -1,5 +1,4 @@
-import { useState } from "react";
-import CodeEditor from "../components/CodeEditor";
+import { useEffect } from "react";
 import Dropzone from "../components/Dropzone";
 import ScanOptions from "../components/ScanOptions";
 import ScanProgress from "../components/ScanProgress";
@@ -7,16 +6,12 @@ import SummaryCards from "../components/SummaryCards";
 import FindingsList from "../components/FindingsList";
 import CodeView from "../components/CodeView";
 import { useSastStore } from "../store/sast";
-import clsx from "clsx";
 import {
-  Shield,
   ScanLine,
   ShieldCheck,
   Database,
   FileWarning,
   Sparkles,
-  Zap,
-  ArrowRight,
 } from "lucide-react";
 
 const FEATURES = [
@@ -51,7 +46,9 @@ export default function Home() {
   const status = useSastStore((s) => s.status);
   const result = useSastStore((s) => s.result);
 
-  const [tab, setTab] = useState<"paste" | "files">("paste");
+  useEffect(() => {
+    setMode("files");
+  }, [setMode]);
 
   return (
     <div className="max-w-[1280px] mx-auto px-6">
@@ -68,7 +65,7 @@ export default function Home() {
         </div>
 
         <h1 className="font-display font-bold text-[44px] md:text-[58px] leading-[1.05] tracking-tight text-white">
-          Analiza código Python en busca de
+          Analiza código en busca de
           <br />
           <span className="gradient-text">vulnerabilidades reales</span>
         </h1>
@@ -90,23 +87,6 @@ export default function Home() {
             }}
           >
             <ScanLine size={18} /> Analizar ahora
-          </button>
-          <button
-            className="btn-ghost !px-6 !py-3"
-            onClick={() => {
-              useSastStore.getState().loadDemo();
-              setTab("paste");
-              setMode("paste");
-              setTimeout(() => {
-                useSastStore.getState().runScan();
-                document
-                  .getElementById("results")
-                  ?.scrollIntoView({ behavior: "smooth" });
-              }, 80);
-            }}
-          >
-            <Zap size={16} /> Demo 1‑clic
-            <ArrowRight size={14} />
           </button>
         </div>
       </section>
@@ -139,38 +119,7 @@ export default function Home() {
       <section id="analyzer" className="pb-10 scroll-mt-24">
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
-            <div className="glass-surface rounded-2xl p-1.5 flex gap-1.5 bg-black/20">
-              <button
-                className={clsx(
-                  "flex-1 rounded-xl py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2",
-                  tab === "paste"
-                    ? "bg-white/[0.07] text-white shadow-glass-sm"
-                    : "text-slate-400 hover:text-slate-200",
-                )}
-                onClick={() => {
-                  setTab("paste");
-                  setMode("paste");
-                }}
-              >
-                <Shield size={15} /> Pegar código
-              </button>
-              <button
-                className={clsx(
-                  "flex-1 rounded-xl py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2",
-                  tab === "files"
-                    ? "bg-white/[0.07] text-white shadow-glass-sm"
-                    : "text-slate-400 hover:text-slate-200",
-                )}
-                onClick={() => {
-                  setTab("files");
-                  setMode("files");
-                }}
-              >
-                <ScanLine size={15} /> Subir archivos / .zip
-              </button>
-            </div>
-
-            {tab === "paste" ? <CodeEditor /> : <Dropzone />}
+            <Dropzone />
           </div>
 
           <div>

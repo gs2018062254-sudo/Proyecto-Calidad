@@ -7,11 +7,11 @@ import { formatDateTime, formatRelative, formatTime } from "../lib/datetime";
 
 export default function CodeView() {
   const result = useSastStore((s) => s.result);
-  const sources = result?.sources || {};
-  const files = Object.keys(sources);
+  const sources = (result && (result as any).sources) ? (result as any).sources : {};
+  const files = Object.keys(sources || {});
   const activeFile = useSastStore((s) => s.activeFile);
   const setActiveFile = useSastStore((s) => s.setActiveFile);
-  const findings = result?.findings || [];
+  const findings = Array.isArray(result?.findings) ? result.findings : [];
   const toggleExpand = useSastStore((s) => s.toggleExpand);
   const expandedId = useSastStore((s) => s.expandedFindingId);
 
@@ -19,7 +19,7 @@ export default function CodeView() {
 
   const currentFile =
     activeFile && sources[activeFile] ? activeFile : files[0];
-  const source = sources[currentFile] || "";
+  const source = (sources[currentFile] as string | undefined) || "";
 
   const fileFindings = useMemo(
     () =>
@@ -46,7 +46,9 @@ export default function CodeView() {
     return lineFindings
       .slice()
       .sort(
-        (a, b) => severityOrder(a.severity) - severityOrder(b.severity),
+        (a, b) =>
+          severityOrder((a?.severity ?? "info") as any) -
+          severityOrder((b?.severity ?? "info") as any),
       )[0];
   }
 
@@ -108,7 +110,13 @@ export default function CodeView() {
               const line = i + 1;
               const lineFindings = findingByLine.get(line);
               const highest = lineFindings ? highestSeverity(lineFindings) : null;
-              const info = highest ? SEVERITY_INFO[highest.severity] : null;
+              const info = highest
+                ? SEVERITY_INFO[highest?.severity ?? "info"] ?? {
+                    color: "#64748b",
+                    emoji: "ℹ️",
+                    labelEs: "Info",
+                  }
+                : null;
 
               const bg = info ? `${info.color}12` : undefined;
               const leftShadow = info
@@ -158,7 +166,11 @@ export default function CodeView() {
                     {lineFindings && (
                       <div className="flex flex-col gap-1 mt-1 mb-2">
                         {lineFindings.map((f, j) => {
-                          const sev = SEVERITY_INFO[f.severity];
+                          const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
+                            color: "#64748b",
+                            emoji: "ℹ️",
+                            labelEs: "Info",
+                          };
                           return (
                             <div
                               key={j}
@@ -176,10 +188,10 @@ export default function CodeView() {
                                   className="font-bold"
                                   style={{ color: sev.color }}
                                 >
-                                  {f.title}
+                                  {f?.title ?? "Hallazgo"}
                                 </span>
                                 <span className="ml-2 text-[10px] font-mono text-surface-500">
-                                  {f.rule_id}
+                                  {f?.rule_id ?? "rule"}
                                 </span>
                               </div>
                             </div>

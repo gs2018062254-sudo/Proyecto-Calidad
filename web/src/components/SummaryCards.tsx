@@ -84,13 +84,16 @@ export default function SummaryCards() {
   const history = useSastStore((s) => s.history);
   if (!result) return null;
 
-  const summary: SummaryDto = result.summary;
+  const rawSummary = (result.summary || {}) as Partial<SummaryDto> | undefined | null;
+  const summary: SummaryDto = {
+    critical: typeof rawSummary?.critical === "number" ? rawSummary.critical : 0,
+    high: typeof rawSummary?.high === "number" ? rawSummary.high : 0,
+    medium: typeof rawSummary?.medium === "number" ? rawSummary.medium : 0,
+    low: typeof rawSummary?.low === "number" ? rawSummary.low : 0,
+    info: typeof rawSummary?.info === "number" ? rawSummary.info : 0,
+  };
   const total =
-    summary.critical +
-    summary.high +
-    summary.medium +
-    summary.low +
-    summary.info;
+    summary.critical + summary.high + summary.medium + summary.low + summary.info;
 
   const sevList = [
     {
@@ -126,6 +129,8 @@ export default function SummaryCards() {
   ];
 
   const timestamp = result.timestamp;
+  const filesScanned = typeof result.files_scanned === "number" ? result.files_scanned : 0;
+  const durationMs = typeof result.duration_ms === "number" ? result.duration_ms : 0;
 
   return (
     <div className="space-y-5">
@@ -142,12 +147,12 @@ export default function SummaryCards() {
             <p className="text-[14px] text-surface-500 mt-1 leading-relaxed">
               Se encontraron{" "}
               <b className="text-surface-800">{total}</b> hallazgos en{" "}
-              <b className="text-surface-800">{result.files_scanned}</b>{" "}
-              archivo{result.files_scanned !== 1 ? "s" : ""} ·{" "}
+              <b className="text-surface-800">{filesScanned}</b>{" "}
+              archivo{filesScanned !== 1 ? "s" : ""} ·{" "}
               <b className="text-surface-800 font-mono">
-                {result.duration_ms < 1000
-                  ? `${result.duration_ms} ms`
-                  : `${(result.duration_ms / 1000).toFixed(2)} s`}
+                {durationMs < 1000
+                  ? `${durationMs} ms`
+                  : `${(durationMs / 1000).toFixed(2)} s`}
               </b>
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">

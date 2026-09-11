@@ -46,18 +46,22 @@ export default function FindingsList() {
   if (!result) return null;
 
   const allFiles = Object.keys(result.sources || {});
+  const rawFindings = Array.isArray(result.findings) ? result.findings : [];
 
-  const filtered: FindingDto[] = result.findings
+  const filtered: FindingDto[] = rawFindings
     .filter((f) => {
+      if (!f) return false;
       if (activeFilter !== "all" && f.severity !== activeFilter) return false;
       if (activeFile && f.file_path !== activeFile) return false;
       return true;
     })
-    .sort(
-      (a, b) =>
-        severityOrder(a.severity) - severityOrder(b.severity) ||
-        b.confidence - a.confidence,
-    );
+    .sort((a, b) => {
+      const sA = severityOrder((a?.severity ?? "info") as any) || 0;
+      const sB = severityOrder((b?.severity ?? "info") as any) || 0;
+      const cA = typeof a?.confidence === "number" ? a.confidence : 0;
+      const cB = typeof b?.confidence === "number" ? b.confidence : 0;
+      return sA - sB || cB - cA;
+    });
 
   const filters: { value: Severity | "all"; label: string; emoji: string; color: string }[] = [
     { value: "all", label: "Todos", emoji: "🛡️", color: "#64748b" },
@@ -85,8 +89,8 @@ export default function FindingsList() {
                 : {};
               const count =
                 f.value === "all"
-                  ? result.findings.length
-                  : result.findings.filter((x) => x.severity === f.value).length;
+                  ? rawFindings.length
+                  : rawFindings.filter((x) => x?.severity === f.value).length;
               return (
                 <button
                   key={f.value}
@@ -170,7 +174,11 @@ export default function FindingsList() {
       ) : (
         <div className="space-y-2 max-h-[70vh] overflow-auto scrollbar-thin pr-1">
           {filtered.map((f, idx) => {
-            const sev = SEVERITY_INFO[f.severity];
+            const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
+              color: "#64748b",
+              emoji: "ℹ️",
+              labelEs: "Info",
+            };
             const key = buildFindingKey(f, idx);
             const expanded = expandedKey === key;
             return (
@@ -274,7 +282,12 @@ export default function FindingsList() {
 }
 
 function FindingDetail({ f }: { f: FindingDto }) {
-  const sev = SEVERITY_INFO[f.severity];
+  const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
+    color: "#64748b",
+    emoji: "ℹ️",
+    labelEs: "Info",
+  };
+  const owaspClean = (f.owasp || "").toString().split("-")[0];
   return (
     <div className="space-y-3 pt-3">
       <div>
@@ -282,7 +295,7 @@ function FindingDetail({ f }: { f: FindingDto }) {
           Descripción
         </div>
         <p className="text-[14px] text-surface-700 leading-relaxed">
-          {f.description}
+          {f.description || "Sin descripción."}
         </p>
       </div>
 
@@ -302,36 +315,42 @@ function FindingDetail({ f }: { f: FindingDto }) {
         </div>
       )}
 
-      {f.data_flow && f.data_flow.length > 0 && (
+      {f.data_flow && Array.isArray(f.data_flow) && f.data_flow.length > 0 && (
         <div>
           <div className="text-[11px] uppercase tracking-widest text-surface-500 font-bold mb-1.5">
             Flujo de datos (Taint Analysis)
           </div>
           <ol className="space-y-1.5">
-            {f.data_flow.map((step, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2.5 rounded-lg bg-surface-50 border border-surface-200 px-3 py-2"
-              >
-                <div
-                  className="w-6 h-6 rounded-md grid place-items-center text-[11px] font-bold shrink-0 text-white"
-                  style={{ background: sev.color }}
+            {f.data_flow.map((step, i) => {
+              const safeStep = step ?? { step: i + 1, line: "?", variable: "" };
+              return (
+                <li
+                  key={i}
+                  className="flex items-start gap-2.5 rounded-lg bg-surface-50 border border-surface-200 px-3 py-2"
                 >
-                  {step.step}
-                </div>
-                <div className="min-w-0 flex-1 text-[13px]">
-                  <span className="text-primary-700 font-mono font-bold">
-                    {step.variable}
-                  </span>
-                  <span className="text-surface-400 mx-1.5">
-                    <ArrowRight size={12} className="inline" />
-                  </span>
-                  <span className="text-surface-600">
-                    línea <span className="font-mono text-primary-700 font-bold">{step.line}</span>
-                  </span>
-                </div>
-              </li>
-            ))}
+                  <div
+                    className="w-6 h-6 rounded-md grid place-items-center text-[11px] font-bold shrink-0 text-white"
+                    style={{ background: sev.color }}
+                  >
+                    {safeStep.step ?? i + 1}
+                  </div>
+                  <div className="min-w-0 flex-1 text-[13px]">
+                    <span className="text-primary-700 font-mono font-bold">
+                      {safeStep.variable ?? "—"}
+                    </span>
+                    <span className="text-surface-400 mx-1.5">
+                      <ArrowRight size={12} className="inline" />
+                    </span>
+                    <span className="text-surface-600">
+                      línea{" "}
+                      <span className="font-mono text-primary-700 font-bold">
+                        {safeStep.line ?? "?"}
+                      </span>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}
@@ -341,12 +360,12 @@ function FindingDetail({ f }: { f: FindingDto }) {
           Recomendación
         </div>
         <p className="text-[14px] text-success-700 leading-relaxed bg-success-50/60 border border-success-100 rounded-xl p-3">
-          💡 {f.recommendation}
+          💡 {f.recommendation || "Sin recomendación."}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        {f.owasp && <span className="chip chip-purple">OWASP · {f.owasp.split("-")[0]}</span>}
+        {owaspClean && <span className="chip chip-purple">OWASP · {owaspClean}</span>}
         {f.source && <span className="chip chip-blue">Source: {f.source}</span>}
         {f.sink && <span className="chip chip-amber">Sink: {f.sink}</span>}
       </div>

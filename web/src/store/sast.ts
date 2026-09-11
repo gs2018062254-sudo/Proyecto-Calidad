@@ -179,41 +179,71 @@ export const useSastStore = create<SastStore>((set, get) => {
     activeFile: "",
     history: loadHistoryPersisted(),
 
-    setMode: (m) => set({ mode: m }),
-    setPaste: (v, filename) =>
-      set((s) => ({
-        pasteValue: v,
-        pasteFilename: filename ?? s.pasteFilename,
-      })),
-    addNativeFiles: async (list) => {
-      const allowedExts = new Set([".py", ".pyw", ".zip"]);
-      const valid = list.filter((f) => {
-        const ext = "." + f.name.split(".").pop()?.toLowerCase();
-        return allowedExts.has(ext);
-      });
-      const uploaded: UploadedFile[] = [];
-      for (const f of valid) {
-        const text = await f.text().catch(() => "");
-        uploaded.push({ name: f.name, size: f.size, content: text });
-      }
-      set((s) => {
-        const merged = [...s.nativeFiles];
-        const mergedUp = [...s.files];
-        for (const f of valid) {
-          if (!merged.find((x) => x.name === f.name && x.size === f.size)) merged.push(f);
-        }
-        for (const u of uploaded) {
-          if (!mergedUp.find((x) => x.name === u.name)) mergedUp.push(u);
-        }
-        return { nativeFiles: merged, files: mergedUp, mode: "files" };
-      });
+    setMode: (m) => {
+      try {
+        if (m !== "paste" && m !== "files") return;
+        set({ mode: m });
+      } catch {}
     },
-    removeFile: (name) =>
-      set((s) => ({
-        nativeFiles: s.nativeFiles.filter((f) => f.name !== name),
-        files: s.files.filter((f) => f.name !== name),
-      })),
-    clearFiles: () => set({ nativeFiles: [], files: [] }),
+    setPaste: (v, filename) => {
+      try {
+        const safeValue = typeof v === "string" ? v : v == null ? "" : String(v);
+        const safeName =
+          typeof filename === "string" && filename.trim() !== ""
+            ? filename.trim()
+            : undefined;
+        set((s) => ({
+          pasteValue: safeValue,
+          pasteFilename: safeName ?? s.pasteFilename,
+        }));
+      } catch {}
+    },
+    addNativeFiles: async (list) => {
+      try {
+        if (!Array.isArray(list)) return;
+        const allowedExts = new Set([".py", ".pyw"]);
+        const valid = list.filter((f: any) => {
+          if (!f || typeof f.name !== "string" || typeof f.text !== "function") return false;
+          const ext = "." + String(f.name.split(".").pop() || "").toLowerCase();
+          return allowedExts.has(ext);
+        }) as File[];
+        const uploaded: UploadedFile[] = [];
+        for (const f of valid) {
+          const text = await f
+            .text()
+            .catch(() => "");
+          uploaded.push({
+            name: String(f.name || "file.py"),
+            size: typeof f.size === "number" ? f.size : String(text).length,
+            content: typeof text === "string" ? text : "",
+          });
+        }
+        set((s) => {
+          const merged = [...s.nativeFiles];
+          const mergedUp = [...s.files];
+          for (const f of valid) {
+            if (!merged.find((x) => x.name === f.name && x.size === f.size)) merged.push(f);
+          }
+          for (const u of uploaded) {
+            if (!mergedUp.find((x) => x.name === u.name)) mergedUp.push(u);
+          }
+          return { nativeFiles: merged, files: mergedUp, mode: "files" };
+        });
+      } catch {}
+    },
+    removeFile: (name) => {
+      try {
+        set((s) => ({
+          nativeFiles: s.nativeFiles.filter((f) => f.name !== name),
+          files: s.files.filter((f) => f.name !== name),
+        }));
+      } catch {}
+    },
+    clearFiles: () => {
+      try {
+        set({ nativeFiles: [], files: [] });
+      } catch {}
+    },
 
     setOption: (k, v) =>
       set((s) => {

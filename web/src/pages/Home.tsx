@@ -92,7 +92,14 @@ export default function Home() {
     const onDemo = () => {
       setTab("paste");
       try {
-        analysisRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const raf = () =>
+          analysisRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        if (typeof window !== "undefined") {
+          window.setTimeout(() => window.requestAnimationFrame(raf), 0);
+        }
       } catch {}
     };
     window.addEventListener("sast:load-demo", onDemo);

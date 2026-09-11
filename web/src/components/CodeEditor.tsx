@@ -12,15 +12,17 @@ export default function CodeEditor() {
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [justLoaded, setJustLoaded] = useState(false);
-  const [pulse, setPulse] = useState(0);
 
   // Escucha evento custom del store cuando loadDemo() se dispara desde fuera
   useEffect(() => {
     const onDemo = () => {
-      setPulse((n) => n + 1);
       setJustLoaded(true);
       try {
-        rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const raf = () =>
+          rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof window !== "undefined") {
+          window.setTimeout(() => window.requestAnimationFrame(raf), 0);
+        }
       } catch {}
       const t = window.setTimeout(() => setJustLoaded(false), 3200);
       return () => window.clearTimeout(t);
@@ -32,21 +34,26 @@ export default function CodeEditor() {
   const lines = value ? value.split("\n").length : 0;
 
   const handleLoad = () => {
-    setPulse((n) => n + 1);
     setJustLoaded(true);
-    loadDemo();
     try {
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const raf = () =>
+        rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => window.requestAnimationFrame(raf), 0);
+      }
     } catch {}
+    // Cargar demo después de cualquier animación/paint para evitar Suspense sync
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => loadDemo(), 0);
+    } else {
+      loadDemo();
+    }
     window.setTimeout(() => setJustLoaded(false), 3200);
   };
 
   return (
     <div ref={rootRef} className="scroll-mt-24 animate-fade-up">
-      <div
-        className="rounded-2xl overflow-hidden border border-surface-200 bg-white shadow-card card-hover relative"
-        key={`editor-${pulse}`}
-      >
+      <div className="rounded-2xl overflow-hidden border border-surface-200 bg-white shadow-card card-hover relative">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-100 bg-surface-50">
           <div className="flex gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-full bg-[#FF5F56] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]" />

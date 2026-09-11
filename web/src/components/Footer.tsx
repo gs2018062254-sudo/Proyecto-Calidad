@@ -1,4 +1,4 @@
-import { Shield, ExternalLink, Heart, Code2 } from "lucide-react";
+import { Shield, Heart } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -46,15 +46,6 @@ export default function Footer() {
             )}
           </div>
           <div className="mt-5 flex items-center gap-3">
-            <a
-              className="btn-ghost !py-2"
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Code2 size={14} /> GitHub
-              <ExternalLink size={11} className="opacity-60" />
-            </a>
             <div className="text-xs text-slate-500 ml-auto">
               Hecho con <Heart size={11} className="inline text-neon-pink" />{" "}
               Python + React

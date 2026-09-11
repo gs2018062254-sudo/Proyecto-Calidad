@@ -1,14 +1,9 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Shield, ScanLine, BookOpen, Info, Zap } from "lucide-react";
-import { useSastStore } from "../store/sast";
+import { Shield, ScanLine, BookOpen, Info } from "lucide-react";
 import clsx from "clsx";
 
 export default function Navbar() {
   const loc = useLocation();
-  const loadDemo = useSastStore((s) => s.loadDemo);
-  const runScan = useSastStore((s) => s.runScan);
-  const setMode = useSastStore((s) => s.setMode);
-  const setPaste = useSastStore((s) => s.setPaste);
 
   const navCls = ({ isActive }: { isActive: boolean }) =>
     clsx(
@@ -58,37 +53,6 @@ export default function Navbar() {
             </span>
           </NavLink>
         </nav>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            className="btn-ghost hidden sm:inline-flex"
-            onClick={async () => {
-              loadDemo();
-              setMode("paste");
-              setPaste(useSastStore.getState().pasteValue, "demo.py");
-              if (loc.pathname !== "/") {
-                window.location.href = "/";
-              } else {
-                setTimeout(() => {
-                  runScan();
-                  document
-                    .getElementById("results")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }, 50);
-              }
-            }}
-          >
-            <Zap size={14} /> Demo 1‑clic
-          </button>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-ghost hidden sm:inline-flex"
-          >
-            GitHub
-          </a>
-        </div>
       </div>
     </header>
   );

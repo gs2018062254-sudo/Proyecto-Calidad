@@ -330,42 +330,29 @@ export const useSastStore = create<SastStore>((set, get) => {
     },
 
     loadDemo: () => {
-      const prepare = () =>
-        set({
-          mode: "paste",
-          pasteFilename: "demo.py",
-          status: "idle",
-          result: null,
-          error: undefined,
-          progressStage: 0,
-          expandedFindingId: null,
-          activeSeverityFilter: "all",
-          activeFile: "",
-          nativeFiles: [],
-          files: [],
-        });
-      const applyContent = () =>
-        set({
-          pasteValue: DEMO_SOURCE,
-        });
+      set({
+        mode: "paste",
+        pasteFilename: "demo.py",
+        status: "idle",
+        result: null,
+        error: undefined,
+        progressStage: 0,
+        expandedFindingId: null,
+        activeSeverityFilter: "all",
+        activeFile: "",
+        nativeFiles: [],
+        files: [],
+      });
+      set({
+        pasteValue: DEMO_SOURCE,
+      });
       if (typeof window !== "undefined") {
         try {
-          window.setTimeout(() => {
-            prepare();
-            try {
-              window.dispatchEvent(
-                new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }),
-              );
-            } catch {}
-            window.setTimeout(() => {
-              applyContent();
-            }, 120);
-          }, 0);
-          return;
+          window.dispatchEvent(
+            new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }),
+          );
         } catch {}
       }
-      prepare();
-      applyContent();
     },
     reset: () =>
       set({

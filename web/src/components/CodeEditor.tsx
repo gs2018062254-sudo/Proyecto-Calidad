@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useSastStore } from "../store/sast";
 import { CheckCircle2, Sparkles } from "lucide-react";
 
@@ -57,11 +57,7 @@ export default function CodeEditor() {
         window.setTimeout(() => window.requestAnimationFrame(raf), 0);
       }
     } catch {}
-    if (typeof window !== "undefined") {
-      window.setTimeout(() => loadDemo(), 0);
-    } else {
-      loadDemo();
-    }
+    startTransition(() => loadDemo());
     window.setTimeout(() => setJustLoaded(false), 3200);
   };
 
@@ -72,7 +68,7 @@ export default function CodeEditor() {
   };
 
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value, filename);
+    startTransition(() => setValue(e.target.value, filename));
   };
 
   return (

@@ -10,7 +10,8 @@ import tempfile
 import zipfile
 from typing import Dict, List, Tuple
 
-MAX_TOTAL_SIZE = 15 * 1024 * 1024  # 15 MB para repositorios de código
+DEFAULT_MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "150"))
+MAX_TOTAL_SIZE = DEFAULT_MAX_UPLOAD_SIZE_MB * 1024 * 1024  # 150 MB por defecto
 CODE_EXTENSIONS = {
     ".py", ".pyw",
     ".js", ".jsx", ".mjs", ".cjs",

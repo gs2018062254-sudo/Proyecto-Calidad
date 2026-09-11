@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 from typing import Any, Dict, List, Optional
 import requests
 
 GITHUB_API_BASE = "https://api.github.com"
-MAX_REPO_ZIP_SIZE = 25 * 1024 * 1024  # 25 MB max para escaneo remoto
+DEFAULT_MAX_REPO_ZIP_SIZE_MB = int(os.environ.get("MAX_REPO_SIZE_MB", "150"))
+MAX_REPO_ZIP_SIZE = DEFAULT_MAX_REPO_ZIP_SIZE_MB * 1024 * 1024  # 150 MB por defecto
 IDENTIFIER_REGEX = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 

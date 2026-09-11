@@ -26,14 +26,14 @@ export default function ScanProgress() {
     }
   }, [status, startedAt]);
 
-  if (status !== "loading" && status !== "error") return null;
-
   const [, setTick] = useState(0);
   useEffect(() => {
     if (status !== "loading") return;
     const t = window.setInterval(() => setTick((n) => n + 1), 1000);
     return () => window.clearInterval(t);
   }, [status]);
+
+  if (status !== "loading" && status !== "error") return null;
 
   const elapsedMs = startedDisplay
     ? Date.now() - new Date(startedDisplay).getTime()

@@ -1,0 +1,482 @@
+/* ==========================================================================
+   SAST STUDIO :: Custom Engineered Stylesheet (Non-Generic Frontend)
+   Engineered specifically for Python Static Analysis & AST/Taint Inspection.
+   No generic SaaS cards, no bubbly radii, no template middle-dot chrome.
+   ========================================================================== */
+
+:root {
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Obsidian & Deep Petroleum Palette */
+  --studio-bg: #07090e;
+  --studio-panel: #0c1019;
+  --studio-surface: #121824;
+  --studio-surface-hover: #162030;
+  --studio-surface-active: #1c283d;
+
+  /* Engineering Precision Borders */
+  --studio-border: #182232;
+  --studio-border-bright: #24334c;
+  --studio-border-focus: #3b82f6;
+
+  /* Accent & Signaling */
+  --studio-accent: #2563eb;
+  --studio-accent-hover: #1d4ed8;
+  --studio-accent-dim: rgba(37, 99, 235, 0.12);
+  --studio-accent-border: rgba(59, 130, 246, 0.35);
+
+  /* Typography */
+  --studio-text: #f3f6fa;
+  --studio-text-secondary: #94a3b8;
+  --studio-text-faint: #55657e;
+
+  /* Security Severity Signaling */
+  --sev-critical-text: #fda4af;
+  --sev-critical-bg: rgba(225, 29, 72, 0.14);
+  --sev-critical-border: rgba(225, 29, 72, 0.45);
+
+  --sev-high-text: #fdba74;
+  --sev-high-bg: rgba(234, 88, 12, 0.14);
+  --sev-high-border: rgba(234, 88, 12, 0.45);
+
+  --sev-medium-text: #fde047;
+  --sev-medium-bg: rgba(202, 138, 4, 0.14);
+  --sev-medium-border: rgba(202, 138, 4, 0.45);
+
+  --sev-low-text: #6ee7b7;
+  --sev-low-bg: rgba(5, 150, 105, 0.14);
+  --sev-low-border: rgba(5, 150, 105, 0.45);
+
+  --sev-info-text: #93c5fd;
+  --sev-info-bg: rgba(37, 99, 235, 0.14);
+  --sev-info-border: rgba(37, 99, 235, 0.45);
+
+  /* Precise Corner Radii (No 24px bubble shapes) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+/* Base Body Application Canvas */
+body {
+  background-color: var(--studio-bg);
+  color: var(--studio-text);
+  font-family: var(--font-body);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: -0.011em;
+}
+
+/* Custom Engineered Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--studio-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--studio-border);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--studio-border-bright);
+}
+
+/* ==========================================================================
+   Studio Layout: Integrated Engineering Frame
+   ========================================================================== */
+
+.studio-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Top Console Header & Telemetry */
+.studio-console-header {
+  background: var(--studio-panel);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .studio-console-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.studio-title-group h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+  letter-spacing: -0.025em;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.2;
+}
+
+.studio-title-group p {
+  color: var(--studio-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 680px;
+}
+
+/* Telemetry HUD Strip */
+.studio-hud-strip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+}
+
+@media (min-width: 640px) {
+  .studio-hud-strip {
+    grid-template-columns: repeat(4, auto);
+    gap: 1.5rem;
+  }
+}
+
+.studio-hud-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.studio-hud-label {
+  font-size: 0.7rem;
+  color: var(--studio-text-faint);
+  text-transform: none;
+}
+
+.studio-hud-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--studio-text);
+}
+
+/* Dual-Pane Desk (Code Canvas + Control Rack) */
+.studio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .studio-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  }
+}
+
+/* Instrument Chassis (Single Enclosure) */
+.studio-chassis {
+  background: var(--studio-panel);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Studio Toolbar */
+.studio-toolbar {
+  background: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-border);
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Tab Switcher with engineering finish */
+.studio-tab-group {
+  display: inline-flex;
+  background: var(--studio-panel);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+
+.studio-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--studio-text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.studio-tab-btn:hover {
+  color: var(--studio-text);
+  background: var(--studio-surface-hover);
+}
+
+.studio-tab-btn.active {
+  color: #ffffff;
+  background: var(--studio-surface-active);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Technical Inputs & Selects */
+.studio-select {
+  background: var(--studio-panel);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-sm);
+  color: var(--studio-text);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.studio-select:focus {
+  border-color: var(--studio-border-focus);
+}
+
+/* Buttons */
+.studio-btn-primary {
+  background: var(--studio-accent);
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.15s, transform 0.05s;
+}
+
+.studio-btn-primary:hover {
+  background: var(--studio-accent-hover);
+}
+
+.studio-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.studio-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.studio-btn-secondary {
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.38rem 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.studio-btn-secondary:hover {
+  background: var(--studio-surface-hover);
+  border-color: var(--studio-border-bright);
+  color: #ffffff;
+}
+
+.studio-btn-accent {
+  background: var(--studio-accent-dim);
+  color: #93c5fd;
+  border: 1px solid var(--studio-accent-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.38rem 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.studio-btn-accent:hover {
+  background: rgba(37, 99, 235, 0.22);
+  color: #ffffff;
+}
+
+/* Studio Bottom Status Tray */
+.studio-statusbar {
+  background: var(--studio-surface);
+  border-top: 1px solid var(--studio-border);
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--studio-text-secondary);
+}
+
+.studio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-panel);
+  color: var(--studio-text-secondary);
+}
+
+/* Severity Tag Badges */
+.studio-sev-critical {
+  color: var(--sev-critical-text);
+  background: var(--sev-critical-bg);
+  border: 1px solid var(--sev-critical-border);
+}
+.studio-sev-high {
+  color: var(--sev-high-text);
+  background: var(--sev-high-bg);
+  border: 1px solid var(--sev-high-border);
+}
+.studio-sev-medium {
+  color: var(--sev-medium-text);
+  background: var(--sev-medium-bg);
+  border: 1px solid var(--sev-medium-border);
+}
+.studio-sev-low {
+  color: var(--sev-low-text);
+  background: var(--sev-low-bg);
+  border: 1px solid var(--sev-low-border);
+}
+.studio-sev-info {
+  color: var(--sev-info-text);
+  background: var(--sev-info-bg);
+  border: 1px solid var(--sev-info-border);
+}
+
+/* ==========================================================================
+   Triage Findings & Inspector Styling
+   ========================================================================== */
+
+.studio-findings-panel {
+  background: var(--studio-panel);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.studio-findings-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--studio-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: var(--studio-surface);
+}
+
+.studio-findings-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Findings Item */
+.studio-finding-row {
+  border-bottom: 1px solid var(--studio-border);
+  padding: 1rem 1.25rem;
+  transition: background-color 0.12s;
+}
+
+.studio-finding-row:last-child {
+  border-bottom: none;
+}
+
+.studio-finding-row:hover {
+  background: var(--studio-surface-hover);
+}
+
+/* Taint Flow Step Connectors */
+.studio-taint-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--studio-border-bright);
+}
+
+.studio-taint-step {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--studio-text-secondary);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* Sidebar navigation technical link */
+.studio-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--studio-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.studio-nav-item:hover {
+  color: #ffffff;
+  background: var(--studio-surface-hover);
+}
+
+.studio-nav-item.active {
+  color: #ffffff;
+  background: var(--studio-surface-active);
+  border-left: 3px solid var(--studio-accent);
+}

@@ -116,22 +116,18 @@ export default function Rules() {
   const display = rules.length ? rules : FALLBACK_RULES;
 
   return (
-    <div className="max-w-[1280px] mx-auto px-6 py-12">
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 px-3.5 py-1 mb-5">
-          <BookOpen size={14} className="text-neon-cyan" />
-          <span className="text-[12px] font-semibold tracking-wider uppercase text-neon-cyan">
-            Reglas SAST
-          </span>
+    <div className="max-w-[1280px] mx-auto py-4 space-y-8">
+      <div className="text-center max-w-2xl mx-auto space-y-3">
+        <div className="inline-flex items-center gap-2 rounded-full bg-blue-950/60 border border-blue-800/60 px-3.5 py-1 text-xs text-blue-400 font-mono">
+          <BookOpen size={14} className="text-blue-400" />
+          <span>CATÁLOGO DE REGLAS DE DETECCIÓN</span>
         </div>
-        <h1 className="font-display font-bold text-4xl md:text-5xl tracking-tight text-white">
-          Catálogo de{" "}
-          <span className="gradient-text">reglas de detección</span>
+        <h1 className="font-display font-extrabold text-3xl md:text-4xl tracking-tight text-white">
+          Reglas de Seguridad Estática (SAST)
         </h1>
-        <p className="mt-4 text-slate-400 max-w-2xl mx-auto">
-          {display.length} reglas cubriendo el OWASP Top 10, mitigación CWE y
-          mejores prácticas de seguridad en Python. Cada hallazgo incluye
-          descripción, evidencia y recomendación accionable.
+        <p className="text-sm text-slate-400 leading-relaxed">
+          {display.length} reglas activas cubriendo OWASP Top 10, mitigación de vulnerabilidades CWE y
+          análisis de flujo de datos en Python.
         </p>
       </div>
 
@@ -140,13 +136,13 @@ export default function Rules() {
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
-              className="glass-surface rounded-2xl p-5 h-52 shimmer-bg"
+              className="card bg-[#0a0f1d] border border-slate-800 p-5 h-48 animate-pulse"
             />
           ))}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {display.map((r, i) => {
+          {display.map((r) => {
             const sevKey =
               (r.severity?.toLowerCase() as keyof typeof SEVERITY_INFO) ||
               "info";
@@ -155,32 +151,35 @@ export default function Rules() {
             return (
               <div
                 key={r.id}
-                className="glass-surface rounded-2xl p-5 relative overflow-hidden animate-fadeup"
+                className="card bg-[#0a0f1d] border border-slate-800/90 p-5 relative overflow-hidden transition-all hover:border-slate-700"
                 style={{
-                  animationDelay: `${i * 40}ms`,
-                  boxShadow: `inset 4px 0 0 ${sev.color}`,
+                  borderLeftWidth: 4,
+                  borderLeftColor: sev.color,
                 }}
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={
-                          "tag-severity " + sev.bg + " " + sev.text
-                        }
+                        className="chip !py-0.5 text-[11px]"
+                        style={{
+                          background: `${sev.color}18`,
+                          color: sev.color,
+                          borderColor: `${sev.color}40`,
+                        }}
                       >
                         {sev.emoji} {sev.labelEs}
                       </span>
-                      <span className="font-mono text-[11px] text-slate-500 tracking-wider">
+                      <span className="font-mono text-[11px] text-slate-500 font-medium">
                         {r.id}
                       </span>
                     </div>
-                    <h3 className="font-display font-semibold text-[18px] text-white mt-2">
+                    <h3 className="font-display font-semibold text-[17px] text-white mt-2">
                       {r.title}
                     </h3>
                   </div>
                   <div
-                    className="w-10 h-10 rounded-xl grid place-items-center shrink-0"
+                    className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
                     style={{ background: `${sev.color}15`, color: sev.color }}
                   >
                     <ShieldAlert size={18} />
@@ -189,7 +188,7 @@ export default function Rules() {
                 <p className="text-sm text-slate-300 leading-relaxed">
                   {r.description}
                 </p>
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4 font-mono text-xs">
                   {r.cwe && (
                     <a
                       href={`https://cwe.mitre.org/data/definitions/${r.cwe.replace(
@@ -198,20 +197,20 @@ export default function Rules() {
                       )}.html`}
                       target="_blank"
                       rel="noreferrer"
-                      className="chip hover:text-neon-cyan"
+                      className="chip chip-gray hover:text-blue-400 hover:border-blue-500/40"
                     >
                       {r.cwe} <ExternalLink size={10} />
                     </a>
                   )}
                   {r.owasp && (
-                    <span className="chip !text-[#B28BFF] !border-[#B28BFF]/30 !bg-[#B28BFF]/8">
+                    <span className="chip chip-purple !py-0.5">
                       OWASP {r.owasp.split("-")[0]}
                     </span>
                   )}
                 </div>
                 {r.recommendation && (
-                  <div className="mt-4 rounded-lg bg-black/30 border border-white/5 p-3">
-                    <div className="text-[10px] uppercase tracking-widest text-neon-emerald font-semibold mb-1">
+                  <div className="mt-4 rounded-xl bg-[#070a12] border border-slate-800 p-3">
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold mb-1">
                       Recomendación
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">

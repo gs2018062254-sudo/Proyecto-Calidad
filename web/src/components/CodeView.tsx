@@ -3,7 +3,7 @@ import { useSastStore } from "../store/sast";
 import { SEVERITY_INFO, severityOrder } from "../lib/severity";
 import type { FindingDto } from "../types";
 import { FileCode, CalendarClock, Clock } from "lucide-react";
-import { formatDateTime, formatRelative, formatTime } from "../lib/datetime";
+import { formatDateTime, formatRelative } from "../lib/datetime";
 
 export default function CodeView() {
   const result = useSastStore((s) => s.result);
@@ -11,21 +11,21 @@ export default function CodeView() {
   const files = Object.keys(sources || {});
   const activeFile = useSastStore((s) => s.activeFile);
   const setActiveFile = useSastStore((s) => s.setActiveFile);
-  const findings = Array.isArray(result?.findings) ? result.findings : [];
+  const findings: FindingDto[] = Array.isArray(result?.findings) ? result.findings : [];
   const toggleExpand = useSastStore((s) => s.toggleExpand);
   const expandedId = useSastStore((s) => s.expandedFindingId);
 
-  if (!result || files.length === 0) return null;
-
   const currentFile =
-    activeFile && sources[activeFile] ? activeFile : files[0];
-  const source = (sources[currentFile] as string | undefined) || "";
+    activeFile && sources[activeFile] ? activeFile : (files[0] || "");
+  const source = currentFile ? ((sources[currentFile] as string | undefined) || "") : "";
 
   const fileFindings = useMemo(
     () =>
-      findings
-        .filter((f) => f.file_path === currentFile)
-        .sort((a, b) => a.line - b.line),
+      currentFile
+        ? findings
+            .filter((f: FindingDto) => f.file_path === currentFile)
+            .sort((a: FindingDto, b: FindingDto) => a.line - b.line)
+        : [],
     [findings, currentFile],
   );
 
@@ -38,6 +38,8 @@ export default function CodeView() {
     }
     return map;
   }, [fileFindings]);
+
+  if (!result || files.length === 0) return null;
 
   const lines = source.split("\n");
   const maxLineDigits = String(lines.length).length;
@@ -55,55 +57,55 @@ export default function CodeView() {
   const tz = result.timezone ?? "UTC";
 
   return (
-    <div className="card overflow-hidden animate-fade-up" style={{ animationDelay: "120ms" }}>
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-surface-100 bg-surface-50 overflow-auto scrollbar-thin">
-        <FileCode size={14} className="text-primary-600 shrink-0" />
+    <div className="rounded-[var(--radius-lg)] border border-[var(--studio-border)] bg-[var(--studio-panel)] overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-3.5 py-2 border-b border-[var(--studio-border)] bg-[var(--studio-surface)] overflow-auto">
+        <FileCode size={14} className="text-blue-400 shrink-0" />
         {files.length > 1 ? (
           <div className="flex gap-1 flex-wrap">
             {files.map((f) => {
-              const n = findings.filter((x) => x.file_path === f).length;
+              const n = findings.filter((x: FindingDto) => x.file_path === f).length;
               return (
                 <button
                   key={f}
                   onClick={() => setActiveFile(f)}
                   className={
-                    "px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition border " +
+                    "px-2.5 py-1 rounded-[var(--radius-sm)] text-xs font-mono font-medium whitespace-nowrap transition border " +
                     (f === currentFile
-                      ? "bg-white text-primary-700 border-primary-200 shadow-soft"
-                      : "bg-transparent border-transparent text-surface-500 hover:bg-white hover:text-surface-800 hover:border-surface-200")
+                      ? "bg-[var(--studio-surface-active)] text-blue-300 border-blue-500/40"
+                      : "bg-transparent border-transparent text-[var(--studio-text-secondary)] hover:bg-slate-800/60 hover:text-slate-200")
                   }
                 >
                   {f.split(/[\\/]/).pop()}
-                  <span className="ml-1.5 text-[10px] opacity-70 font-mono font-bold">
-                    {n}
+                  <span className="ml-1 text-[10px] opacity-75 font-mono">
+                    ({n})
                   </span>
                 </button>
               );
             })}
           </div>
         ) : (
-          <span className="text-[13px] font-semibold text-surface-700 truncate">
+          <span className="text-xs font-mono font-medium text-slate-200 truncate">
             {currentFile}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5">
           {result.timestamp && (
             <>
               <span
-                className="chip chip-gray !py-1 inline-flex items-center gap-1.5"
+                className="studio-badge"
                 title={formatDateTime(result.timestamp, { seconds: true })}
               >
-                <CalendarClock size={11} /> {formatDateTime(result.timestamp, { seconds: true })} · {tz}
+                <CalendarClock size={10} /> {formatDateTime(result.timestamp, { seconds: true })} · {tz}
               </span>
-              <span className="chip chip-green !py-1 inline-flex items-center gap-1.5">
-                <Clock size={11} /> {formatRelative(result.timestamp)} · {formatTime(result.timestamp)}
+              <span className="studio-badge">
+                <Clock size={10} /> {formatRelative(result.timestamp)}
               </span>
             </>
           )}
         </div>
       </div>
 
-      <div className="max-h-[70vh] overflow-auto scrollbar-thin">
+      <div className="max-h-[70vh] overflow-auto bg-[#080d1a]">
         <table className="w-full border-collapse">
           <tbody>
             {lines.map((raw: string, i: number) => {
@@ -113,12 +115,11 @@ export default function CodeView() {
               const info = highest
                 ? SEVERITY_INFO[highest?.severity ?? "info"] ?? {
                     color: "#64748b",
-                    emoji: "ℹ️",
                     labelEs: "Info",
                   }
                 : null;
 
-              const bg = info ? `${info.color}12` : undefined;
+              const bg = info ? `${info.color}16` : undefined;
               const leftShadow = info
                 ? `inset 3px 0 0 ${info.color}`
                 : undefined;
@@ -136,7 +137,7 @@ export default function CodeView() {
                   onClick={() => {
                     if (lineFindings && lineFindings[0]) {
                       const idx = findings.findIndex(
-                        (x) =>
+                        (x: FindingDto) =>
                           x.file_path === currentFile &&
                           x.line === line &&
                           x.rule_id === lineFindings[0].rule_id,
@@ -153,13 +154,13 @@ export default function CodeView() {
                       : `Línea ${line}`
                   }
                 >
-                  <td className="select-none text-right pr-3 pl-4 py-[2px] align-top font-mono text-[12px] text-surface-400 border-r border-surface-100 sticky left-0 bg-white/90 backdrop-blur-sm">
+                  <td className="select-none text-right pr-3 pl-3 py-[2px] align-top font-mono text-[11px] text-slate-500 border-r border-[var(--studio-border)] sticky left-0 bg-[#080d1a]">
                     {String(line).padStart(maxLineDigits, " ")}
                   </td>
                   <td className="py-[2px] pr-4 pl-3 align-top w-full">
                     <pre
-                      className="code-line whitespace-pre"
-                      style={{ color: "#0f172a" }}
+                      className="whitespace-pre font-mono text-xs"
+                      style={{ color: "#f1f5f9" }}
                     >
                       {raw || "\u00A0"}
                     </pre>
@@ -168,32 +169,26 @@ export default function CodeView() {
                         {lineFindings.map((f, j) => {
                           const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
                             color: "#64748b",
-                            emoji: "ℹ️",
                             labelEs: "Info",
                           };
                           return (
                             <div
                               key={j}
-                              className="rounded-lg px-2.5 py-1.5 text-[12px] flex items-start gap-2 border"
+                              className="rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px] font-mono flex items-center gap-2 border"
                               style={{
-                                background: `${sev.color}14`,
-                                borderColor: `${sev.color}33`,
+                                background: `${sev.color}18`,
+                                borderColor: `${sev.color}40`,
                               }}
                             >
-                              <span style={{ color: sev.color }} className="shrink-0">
-                                {sev.emoji}
+                              <span
+                                className="font-semibold"
+                                style={{ color: sev.color }}
+                              >
+                                {f?.title ?? "Hallazgo"}
                               </span>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="font-bold"
-                                  style={{ color: sev.color }}
-                                >
-                                  {f?.title ?? "Hallazgo"}
-                                </span>
-                                <span className="ml-2 text-[10px] font-mono text-surface-500">
-                                  {f?.rule_id ?? "rule"}
-                                </span>
-                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                {f?.rule_id ?? "rule"}
+                              </span>
                             </div>
                           );
                         })}

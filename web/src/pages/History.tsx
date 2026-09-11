@@ -143,31 +143,31 @@ export default function History() {
 
       {/* Stats summary */}
       <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="stat-card bg-white border-surface-200">
-          <div className="text-[12px] font-semibold text-surface-500">Análisis</div>
-          <div className="font-display font-bold text-2xl mt-1 text-surface-900">{filtered.length}</div>
+        <div className="stat-card bg-[#0a0f1d] border-slate-800">
+          <div className="text-[12px] font-mono font-semibold text-slate-400 uppercase">Análisis</div>
+          <div className="font-display font-bold text-2xl mt-1 text-white font-mono">{filtered.length}</div>
         </div>
-        <div className="stat-card bg-white border-danger-100">
-          <div className="text-[12px] font-semibold text-danger-600">Críticos</div>
-          <div className="font-display font-bold text-2xl mt-1 text-danger-700">{totals.c}</div>
+        <div className="stat-card bg-[#0a0f1d] border-rose-900/40">
+          <div className="text-[12px] font-mono font-semibold text-rose-400 uppercase">Críticos</div>
+          <div className="font-display font-bold text-2xl mt-1 text-rose-400 font-mono">{totals.c}</div>
         </div>
-        <div className="stat-card bg-white border-warning-100">
-          <div className="text-[12px] font-semibold text-warning-600">Altos</div>
-          <div className="font-display font-bold text-2xl mt-1 text-warning-700">{totals.h}</div>
+        <div className="stat-card bg-[#0a0f1d] border-amber-900/40">
+          <div className="text-[12px] font-mono font-semibold text-amber-400 uppercase">Altos</div>
+          <div className="font-display font-bold text-2xl mt-1 text-amber-400 font-mono">{totals.h}</div>
         </div>
-        <div className="stat-card bg-white border-[#fde68a]">
-          <div className="text-[12px] font-semibold text-[#b45309]">Medios</div>
-          <div className="font-display font-bold text-2xl mt-1 text-[#92400e]">{totals.m}</div>
+        <div className="stat-card bg-[#0a0f1d] border-yellow-900/40">
+          <div className="text-[12px] font-mono font-semibold text-yellow-400 uppercase">Medios</div>
+          <div className="font-display font-bold text-2xl mt-1 text-yellow-400 font-mono">{totals.m}</div>
         </div>
-        <div className="stat-card bg-white border-success-100">
-          <div className="text-[12px] font-semibold text-success-700">Bajos + Info</div>
-          <div className="font-display font-bold text-2xl mt-1 text-success-700">
+        <div className="stat-card bg-[#0a0f1d] border-emerald-900/40">
+          <div className="text-[12px] font-mono font-semibold text-emerald-400 uppercase">Bajos + Info</div>
+          <div className="font-display font-bold text-2xl mt-1 text-emerald-400 font-mono">
             {totals.l + totals.i}
           </div>
         </div>
-        <div className="stat-card bg-white border-primary-100">
-          <div className="text-[12px] font-semibold text-primary-700">Tiempo medio</div>
-          <div className="font-display font-bold text-2xl mt-1 text-primary-700">
+        <div className="stat-card bg-[#0a0f1d] border-blue-900/40">
+          <div className="text-[12px] font-mono font-semibold text-blue-400 uppercase">Tiempo medio</div>
+          <div className="font-display font-bold text-2xl mt-1 text-blue-400 font-mono">
             {totals.avgMs < 1000 ? `${totals.avgMs} ms` : `${(totals.avgMs / 1000).toFixed(2)} s`}
           </div>
         </div>
@@ -322,29 +322,29 @@ export default function History() {
                   filtered.map((h) => (
                     <tr
                       key={h.id}
-                      className="border-b border-surface-100 last:border-none hover:bg-surface-50/60 transition-colors"
+                      className="border-b border-slate-800 last:border-none hover:bg-[#0d1424] transition-colors"
                     >
                       <td className="px-5 py-3 align-top">
-                        <div className="text-[13px] font-semibold text-surface-800">
+                        <div className="text-[13px] font-mono font-medium text-slate-200">
                           {formatDateTime(h.created_at, { seconds: true })}
                         </div>
-                        <div className="text-[11px] text-surface-500 mt-0.5 inline-flex items-center gap-1">
+                        <div className="text-[11px] text-slate-500 mt-0.5 inline-flex items-center gap-1 font-mono">
                           <Clock size={11} /> {formatRelative(h.created_at)}
                         </div>
                       </td>
                       <td className="px-5 py-3 align-top">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 shrink-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-950/60 border border-blue-800/60 grid place-items-center text-blue-400 shrink-0">
                             <FileCode size={14} />
                           </div>
                           <div className="min-w-0">
                             <div
-                              className="text-[13px] font-semibold text-surface-800 truncate max-w-[260px]"
+                              className="text-[13px] font-mono font-medium text-slate-200 truncate max-w-[260px]"
                               title={h.target}
                             >
                               {h.target}
                             </div>
-                            <div className="text-[11px] text-surface-500 font-mono truncate max-w-[260px]">
+                            <div className="text-[11px] text-slate-500 font-mono truncate max-w-[260px]">
                               ID {h.id}
                             </div>
                           </div>
@@ -352,41 +352,41 @@ export default function History() {
                       </td>
                       <td className="px-5 py-3 align-top">
                         {h.mode === "paste" ? (
-                          <span className="chip chip-blue">Pegar</span>
+                          <span className="chip chip-blue !py-0.5 text-[11px]">Pegar</span>
                         ) : (
-                          <span className="chip chip-purple">Archivos</span>
+                          <span className="chip chip-purple !py-0.5 text-[11px]">Archivos</span>
                         )}
                       </td>
                       <td className="px-5 py-3 align-top">
-                        <div className="text-[13px] font-semibold text-surface-800">
+                        <div className="text-[13px] font-mono font-medium text-slate-200">
                           {h.files}
                         </div>
-                        <div className="text-[11px] text-surface-500">archivos analizados</div>
+                        <div className="text-[11px] text-slate-500">archivos analizados</div>
                       </td>
                       <td className="px-5 py-3 align-top">
-                        <span className={`chip ${SEV_STYLE[h.severity_max as string] || "chip-gray"}`}>
+                        <span className={`chip ${SEV_STYLE[h.severity_max as string] || "chip-gray"} !py-0.5 text-[11px]`}>
                           {SEV_LABEL[h.severity_max as string] || "—"}
                         </span>
                       </td>
                       <td className="px-5 py-3 align-top text-right">
-                        <div className="inline-flex flex-wrap justify-end items-center gap-1.5 font-mono text-[12px] font-semibold">
-                          <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-100">
+                        <div className="inline-flex flex-wrap justify-end items-center gap-1 font-mono text-[11px]">
+                          <span className="px-1.5 py-0.5 rounded bg-rose-950/50 text-rose-400 border border-rose-800/40">
                             {h.summary.critical || 0}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-warning-50 text-warning-700 border border-warning-100">
+                          <span className="px-1.5 py-0.5 rounded bg-amber-950/50 text-amber-400 border border-amber-800/40">
                             {h.summary.high || 0}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-[#fef9c3] text-[#854d0e] border border-[#fde68a]">
+                          <span className="px-1.5 py-0.5 rounded bg-yellow-950/50 text-yellow-400 border border-yellow-800/40">
                             {h.summary.medium || 0}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-success-50 text-success-700 border border-success-100">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-400 border border-emerald-800/40">
                             {h.summary.low || 0}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-100">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-950/50 text-blue-400 border border-blue-800/40">
                             {h.summary.info || 0}
                           </span>
                         </div>
-                        <div className="text-[11px] text-surface-500 mt-1 inline-flex items-center gap-1">
+                        <div className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1 font-mono">
                           {h.severity_count === 0 ? (
                             <>
                               <ShieldCheck size={11} className="text-success-600" /> 0 fallos · limpio

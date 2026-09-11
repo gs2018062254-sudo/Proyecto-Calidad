@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { startTransition } from "react";
 import type {
   FindingDto,
   HistoryEntry,
@@ -192,10 +193,12 @@ export const useSastStore = create<SastStore>((set, get) => {
           typeof filename === "string" && filename.trim() !== ""
             ? filename.trim()
             : undefined;
-        set((s) => ({
-          pasteValue: safeValue,
-          pasteFilename: safeName ?? s.pasteFilename,
-        }));
+        startTransition(() => {
+          set((s) => ({
+            pasteValue: safeValue,
+            pasteFilename: safeName ?? s.pasteFilename,
+          }));
+        });
       } catch {}
     },
     addNativeFiles: async (list) => {
@@ -331,23 +334,27 @@ export const useSastStore = create<SastStore>((set, get) => {
 
     loadDemo: () => {
       const prepare = () =>
-        set({
-          mode: "paste",
-          pasteFilename: "demo.py",
-          status: "idle",
-          result: null,
-          error: undefined,
-          progressStage: 0,
-          expandedFindingId: null,
-          activeSeverityFilter: "all",
-          activeFile: "",
-          nativeFiles: [],
-          files: [],
-        });
+        startTransition(() =>
+          set({
+            mode: "paste",
+            pasteFilename: "demo.py",
+            status: "idle",
+            result: null,
+            error: undefined,
+            progressStage: 0,
+            expandedFindingId: null,
+            activeSeverityFilter: "all",
+            activeFile: "",
+            nativeFiles: [],
+            files: [],
+          }),
+        );
       const applyContent = () =>
-        set({
-          pasteValue: DEMO_SOURCE,
-        });
+        startTransition(() =>
+          set({
+            pasteValue: DEMO_SOURCE,
+          }),
+        );
       if (typeof window !== "undefined") {
         try {
           window.setTimeout(() => {

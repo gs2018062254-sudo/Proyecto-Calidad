@@ -330,26 +330,35 @@ export const useSastStore = create<SastStore>((set, get) => {
     },
 
     loadDemo: () => {
-      set({
-        mode: "paste",
-        pasteValue: DEMO_SOURCE,
-        pasteFilename: "demo.py",
-        status: "idle",
-        result: null,
-        error: undefined,
-        progressStage: 0,
-        expandedFindingId: null,
-        activeSeverityFilter: "all",
-        activeFile: "",
-        nativeFiles: [],
-        files: [],
-      });
+      const apply = () =>
+        set({
+          mode: "paste",
+          pasteValue: DEMO_SOURCE,
+          pasteFilename: "demo.py",
+          status: "idle",
+          result: null,
+          error: undefined,
+          progressStage: 0,
+          expandedFindingId: null,
+          activeSeverityFilter: "all",
+          activeFile: "",
+          nativeFiles: [],
+          files: [],
+        });
       if (typeof window !== "undefined") {
         try {
-          // Manda evento para que Home haga scroll hasta el editor
-          window.dispatchEvent(new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }));
+          window.setTimeout(() => {
+            apply();
+            try {
+              window.dispatchEvent(
+                new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }),
+              );
+            } catch {}
+          }, 0);
+          return;
         } catch {}
       }
+      apply();
     },
     reset: () =>
       set({

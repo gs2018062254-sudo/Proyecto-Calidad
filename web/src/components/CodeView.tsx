@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { useSastStore } from "../store/sast";
 import { SEVERITY_INFO, severityOrder } from "../lib/severity";
 import type { FindingDto } from "../types";
-import { FileCode } from "lucide-react";
+import { FileCode, CalendarClock, Clock } from "lucide-react";
+import { formatDateTime, formatRelative, formatTime } from "../lib/datetime";
 
 export default function CodeView() {
   const result = useSastStore((s) => s.result);
@@ -49,38 +50,55 @@ export default function CodeView() {
       )[0];
   }
 
+  const tz = result.timezone ?? "UTC";
+
   return (
-    <div
-      className="glass-surface rounded-2xl overflow-hidden animate-fadeup"
-      style={{ animationDelay: "120ms" }}
-    >
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 bg-black/30 overflow-auto scrollbar-thin">
-        <FileCode size={14} className="text-neon-cyan shrink-0" />
+    <div className="card overflow-hidden animate-fade-up" style={{ animationDelay: "120ms" }}>
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-surface-100 bg-surface-50 overflow-auto scrollbar-thin">
+        <FileCode size={14} className="text-primary-600 shrink-0" />
         {files.length > 1 ? (
-          <div className="flex gap-1">
-            {files.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFile(f)}
-                className={
-                  "px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition " +
-                  (f === currentFile
-                    ? "bg-white/10 text-white border border-white/10"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5")
-                }
-              >
-                {f.split(/[\\/]/).pop()}
-                <span className="ml-1.5 text-[10px] opacity-60 font-mono">
-                  {findings.filter((x) => x.file_path === f).length}
-                </span>
-              </button>
-            ))}
+          <div className="flex gap-1 flex-wrap">
+            {files.map((f) => {
+              const n = findings.filter((x) => x.file_path === f).length;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setActiveFile(f)}
+                  className={
+                    "px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition border " +
+                    (f === currentFile
+                      ? "bg-white text-primary-700 border-primary-200 shadow-soft"
+                      : "bg-transparent border-transparent text-surface-500 hover:bg-white hover:text-surface-800 hover:border-surface-200")
+                  }
+                >
+                  {f.split(/[\\/]/).pop()}
+                  <span className="ml-1.5 text-[10px] opacity-70 font-mono font-bold">
+                    {n}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : (
-          <span className="text-xs text-slate-300 truncate">
+          <span className="text-[13px] font-semibold text-surface-700 truncate">
             {currentFile}
           </span>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          {result.timestamp && (
+            <>
+              <span
+                className="chip chip-gray !py-1 inline-flex items-center gap-1.5"
+                title={formatDateTime(result.timestamp, { seconds: true })}
+              >
+                <CalendarClock size={11} /> {formatDateTime(result.timestamp, { seconds: true })} · {tz}
+              </span>
+              <span className="chip chip-green !py-1 inline-flex items-center gap-1.5">
+                <Clock size={11} /> {formatRelative(result.timestamp)} · {formatTime(result.timestamp)}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="max-h-[70vh] overflow-auto scrollbar-thin">
@@ -92,7 +110,7 @@ export default function CodeView() {
               const highest = lineFindings ? highestSeverity(lineFindings) : null;
               const info = highest ? SEVERITY_INFO[highest.severity] : null;
 
-              const bg = info ? `${info.color}14` : undefined;
+              const bg = info ? `${info.color}12` : undefined;
               const leftShadow = info
                 ? `inset 3px 0 0 ${info.color}`
                 : undefined;
@@ -101,10 +119,12 @@ export default function CodeView() {
                 <tr
                   key={line}
                   className={
-                    "transition hover:bg-white/[0.03] group " +
-                    (info ? "cursor-pointer" : "")
+                    "transition group " + (info ? "cursor-pointer" : "")
                   }
-                  style={{ background: bg, boxShadow: leftShadow }}
+                  style={{
+                    background: bg,
+                    boxShadow: leftShadow,
+                  }}
                   onClick={() => {
                     if (lineFindings && lineFindings[0]) {
                       const idx = findings.findIndex(
@@ -122,16 +142,16 @@ export default function CodeView() {
                   title={
                     lineFindings
                       ? `${lineFindings.length} hallazgo(s): ${lineFindings.map((f) => f.title).join(", ")}`
-                      : undefined
+                      : `Línea ${line}`
                   }
                 >
-                  <td className="select-none text-right pr-3 pl-4 py-[2px] align-top font-mono text-[12px] text-slate-600 border-r border-white/5 sticky left-0 bg-night-900/60 backdrop-blur-sm">
+                  <td className="select-none text-right pr-3 pl-4 py-[2px] align-top font-mono text-[12px] text-surface-400 border-r border-surface-100 sticky left-0 bg-white/90 backdrop-blur-sm">
                     {String(line).padStart(maxLineDigits, " ")}
                   </td>
                   <td className="py-[2px] pr-4 pl-3 align-top w-full">
                     <pre
                       className="code-line whitespace-pre"
-                      style={{ color: "#e2e8f0" }}
+                      style={{ color: "#0f172a" }}
                     >
                       {raw || "\u00A0"}
                     </pre>
@@ -142,23 +162,23 @@ export default function CodeView() {
                           return (
                             <div
                               key={j}
-                              className="rounded-md px-2.5 py-1.5 text-xs flex items-start gap-2"
+                              className="rounded-lg px-2.5 py-1.5 text-[12px] flex items-start gap-2 border"
                               style={{
-                                background: `${sev.color}18`,
-                                border: `1px solid ${sev.color}33`,
+                                background: `${sev.color}14`,
+                                borderColor: `${sev.color}33`,
                               }}
                             >
-                              <span style={{ color: sev.color }}>
+                              <span style={{ color: sev.color }} className="shrink-0">
                                 {sev.emoji}
                               </span>
                               <div className="min-w-0 flex-1">
                                 <span
-                                  className="font-semibold"
+                                  className="font-bold"
                                   style={{ color: sev.color }}
                                 >
                                   {f.title}
                                 </span>
-                                <span className="ml-2 text-[10px] font-mono text-slate-500">
+                                <span className="ml-2 text-[10px] font-mono text-surface-500">
                                   {f.rule_id}
                                 </span>
                               </div>

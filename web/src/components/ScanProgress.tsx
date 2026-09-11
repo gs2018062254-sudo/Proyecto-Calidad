@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { useSastStore } from "../store/sast";
 import clsx from "clsx";
+import { Loader2, AlertTriangle, Clock, CalendarClock } from "lucide-react";
+import { formatDateTime, formatTime, nowISO } from "../lib/datetime";
 
 const STAGES = [
   { label: "Iniciando motor", detail: "Preparando analizador Python" },
@@ -12,60 +15,83 @@ export default function ScanProgress() {
   const status = useSastStore((s) => s.status);
   const stage = useSastStore((s) => s.progressStage);
   const error = useSastStore((s) => s.error);
+  const startedAt = useSastStore((s) => s.startedAt);
+  const [startedDisplay, setStartedDisplay] = useState<string>(startedAt ?? nowISO());
+
+  useEffect(() => {
+    if (status === "loading" && !startedAt) {
+      setStartedDisplay(nowISO());
+    } else if (startedAt) {
+      setStartedDisplay(startedAt);
+    }
+  }, [status, startedAt]);
 
   if (status !== "loading" && status !== "error") return null;
 
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (status !== "loading") return;
+    const t = window.setInterval(() => setTick((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [status]);
+
+  const elapsedMs = startedDisplay
+    ? Date.now() - new Date(startedDisplay).getTime()
+    : 0;
+  const elapsedSec = Math.max(0, Math.floor(elapsedMs / 1000));
+  const elapsedMin = Math.floor(elapsedSec / 60);
+  const elapsedS = elapsedSec % 60;
+
   return (
-    <div id="results" className="scroll-mt-24 animate-fadeup">
-      <div className="glass-surface rounded-2xl p-7 relative overflow-hidden">
+    <div id="results" className="scroll-mt-24 animate-fade-up">
+      <div className="card p-7 relative overflow-hidden bg-gradient-to-br from-white via-white to-primary-50/40">
         {status === "error" ? (
           <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-xl bg-neon-pink/15 text-neon-pink grid place-items-center">
-              ⚠️
+            <div className="w-11 h-11 rounded-2xl bg-danger-50 text-danger-600 grid place-items-center border border-danger-200 shrink-0">
+              <AlertTriangle size={20} />
             </div>
             <div className="flex-1">
-              <div className="font-display font-semibold text-white">
+              <div className="font-display font-bold text-[17px] text-surface-900 leading-tight">
                 Error durante el análisis
               </div>
-              <div className="text-sm text-slate-400 mt-1 break-words">
+              <div className="text-[14px] text-surface-500 mt-1 break-words">
                 {error ?? "Error desconocido"}
+              </div>
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <span className="chip chip-gray inline-flex items-center gap-1.5">
+                  <CalendarClock size={11} />
+                  {formatDateTime(startedDisplay, { seconds: true })}
+                </span>
+                <span className="chip chip-red inline-flex items-center gap-1.5">
+                  <Clock size={11} />
+                  Error a las {formatTime(startedDisplay)}
+                </span>
               </div>
             </div>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(0,209,255,0.12)] text-neon-cyan grid place-items-center shadow-neon-sm">
-                <svg
-                  className="animate-spin"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    opacity=".25"
-                  />
-                  <path
-                    d="M21 12a9 9 0 0 0-9-9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                </svg>
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
+              <div className="w-12 h-12 rounded-2xl bg-primary-50 border border-primary-100 text-primary-700 grid place-items-center shadow-soft shrink-0">
+                <Loader2 size={22} className="animate-spin" />
               </div>
-              <div>
-                <div className="font-display font-semibold text-white">
+              <div className="flex-1 min-w-0">
+                <div className="font-display font-bold text-[17px] text-surface-900 leading-tight">
                   Escaneando tu código…
                 </div>
-                <div className="text-sm text-slate-400">
+                <div className="text-[13px] text-surface-500 mt-0.5">
                   Por favor espera mientras detectamos vulnerabilidades.
                 </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="chip chip-blue inline-flex items-center gap-1.5">
+                  <CalendarClock size={11} /> Inicio {formatTime(startedDisplay)}
+                </span>
+                <span className="chip chip-gray inline-flex items-center gap-1.5">
+                  <Clock size={11} />{" "}
+                  {elapsedMin > 0 ? `${elapsedMin}m ` : ""}
+                  {elapsedS}s transcurridos
+                </span>
               </div>
             </div>
             <ol className="space-y-3">
@@ -76,31 +102,38 @@ export default function ScanProgress() {
                   <li
                     key={i}
                     className={clsx(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
-                      active ? "bg-white/4" : "opacity-60",
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all border",
+                      active
+                        ? "bg-white border-surface-200 shadow-soft"
+                        : "bg-surface-50/60 border-transparent opacity-70",
                     )}
                   >
                     <div
                       className={clsx(
-                        "w-7 h-7 rounded-md grid place-items-center text-xs font-bold",
+                        "w-7 h-7 rounded-lg grid place-items-center text-xs font-bold shrink-0",
                         done
-                          ? "bg-neon-emerald text-night-900"
+                          ? "bg-success-500 text-white shadow-soft"
                           : active
-                          ? "bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/40"
-                          : "bg-white/5 text-slate-500",
+                          ? "bg-primary-100 text-primary-700 ring-2 ring-primary-200"
+                          : "bg-surface-100 text-surface-400",
                       )}
                     >
                       {done ? "✓" : i + 1}
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-slate-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-semibold text-surface-800">
                         {s.label}
                       </div>
-                      <div className="text-xs text-slate-500">{s.detail}</div>
+                      <div className="text-[12px] text-surface-500">{s.detail}</div>
                     </div>
                     {active && !done && (
-                      <div className="h-1.5 w-24 rounded-full bg-white/5 overflow-hidden">
-                        <div className="h-full w-1/2 shimmer-bg rounded-full" />
+                      <div className="h-1.5 w-24 rounded-full bg-surface-100 overflow-hidden shrink-0">
+                        <div
+                          className="h-full w-1/2 rounded-full animate-pulse"
+                          style={{
+                            background: "linear-gradient(90deg, #3b82f6, #2563eb)",
+                          }}
+                        />
                       </div>
                     )}
                   </li>

@@ -48,6 +48,15 @@ export interface ScanResponse {
   files_scanned: number;
   duration_ms: number;
   sast_version: string;
+  timestamp?: string;
+  timezone?: string;
+  filters_applied?: {
+    min_confidence?: number;
+    min_severity?: string | null;
+    exclude_tests?: boolean;
+    include_sarif?: boolean;
+    include_html?: boolean;
+  };
   summary: SummaryDto;
   findings: FindingDto[];
   sources: Record<string, string>;
@@ -56,6 +65,20 @@ export interface ScanResponse {
   errors?: any[];
   error?: string;
 }
+
+export interface HistoryEntry {
+  id: string;
+  created_at: string;
+  target: string;
+  mode: ScanMode;
+  files: number;
+  duration_ms: number;
+  summary: SummaryDto;
+  severity_max: Severity | "all";
+  severity_count: number;
+  result: ScanResponse;
+}
+
 
 export interface RuleDto {
   id: string;

@@ -102,6 +102,9 @@ def _to_dict_findings(result: ScanResult, sources: dict[str, str]) -> list[dict[
     return out
 
 
+from datetime import datetime, timezone
+
+
 @app.route("/api/health", methods=["GET"])
 def health():
     return jsonify({"ok": True, "sast_version": "0.1.0", "engine": "ready"})
@@ -185,9 +188,8 @@ def scan():
 
         if source_text is not None:
             findings = engine.scan_source(source_text, filename or "untitled.py")
-            from datetime import datetime
             result = ScanResult(target=target_name, files_scanned=1, findings=findings)
-            result.end_time = datetime.utcnow().isoformat()
+            result.end_time = datetime.now(timezone.utc).isoformat()
             sources[filename or "untitled.py"] = source_text
         elif tmpdir:
             for root, _, files in os.walk(tmpdir):
@@ -200,6 +202,8 @@ def scan():
                         except Exception:
                             pass
             result = engine.scan(tmpdir)
+            if result is not None and not result.end_time:
+                result.end_time = datetime.now(timezone.utc).isoformat()
 
         if result is None:
             return jsonify({"ok": False, "error": "No se detectó código fuente válido para analizar."}), 400
@@ -228,6 +232,15 @@ def scan():
             "files_scanned": result.files_scanned,
             "duration_ms": duration_ms,
             "sast_version": result.sast_version,
+            "timestamp": result.end_time or datetime.now(timezone.utc).isoformat(),
+            "timezone": "UTC",
+            "filters_applied": {
+                "min_confidence": float(config.min_confidence),
+                "min_severity": min_severity,
+                "exclude_tests": bool(exclude_tests),
+                "include_sarif": include_sarif,
+                "include_html": include_html,
+            },
             "summary": summary,
             "findings": findings_data,
             "sources": rel_sources,

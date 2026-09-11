@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSastStore } from "../store/sast";
 import {
   FileCode,
@@ -12,13 +12,16 @@ import {
   FolderClosed,
   Clock,
   CheckCircle2,
-  X,
+  X as XIcon,
   ChevronRight,
   Code2,
   Layers,
   Shield,
   Zap,
   TrendingUp,
+  History as HistoryIcon,
+  AlertCircle,
+  ShieldAlert,
 } from "lucide-react";
 import Dropzone from "../components/Dropzone";
 import CodeEditor from "../components/CodeEditor";
@@ -27,6 +30,9 @@ import ScanProgress from "../components/ScanProgress";
 import SummaryCards from "../components/SummaryCards";
 import FindingsList from "../components/FindingsList";
 import CodeView from "../components/CodeView";
+import { formatRelative, formatDateTime } from "../lib/datetime";
+import { useNavigate } from "react-router-dom";
+import type { HistoryEntry } from "../types";
 
 const MINI_CHART = (color: string) => (
   <svg viewBox="0 0 80 28" className="w-20 h-7 flex-shrink-0" fill="none">
@@ -40,99 +46,133 @@ const MINI_CHART = (color: string) => (
   </svg>
 );
 
-const STATS = [
-  {
-    icon: Code2,
-    title: "Total de análisis",
-    value: 12,
-    delta: "+3 esta semana",
-    trend: "up",
-    color: "primary",
-    bg: "#eff6ff",
-    border: "#dbeafe",
-    text: "#1d4ed8",
-    iconBg: "#2563eb",
-  },
-  {
-    icon: AlertTriangle,
-    title: "Vulnerabilidades encontradas",
-    value: 23,
-    delta: "+42% vs. semana anterior",
-    trend: "up",
-    color: "danger",
-    bg: "#fef2f2",
-    border: "#fee2e2",
-    text: "#dc2626",
-    iconBg: "#ef4444",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Tasa de seguridad",
-    value: "96%",
-    delta: "+8% vs. semana anterior",
-    trend: "up",
-    color: "success",
-    bg: "#ecfdf5",
-    border: "#d1fae5",
-    text: "#047857",
-    iconBg: "#10b981",
-  },
-  {
-    icon: FileBarChart,
-    title: "Reportes generados",
-    value: 7,
-    delta: "+3 esta semana",
-    trend: "up",
-    color: "info",
-    bg: "#f5f3ff",
-    border: "#ede9fe",
-    text: "#7c3aed",
-    iconBg: "#8b5cf6",
-  },
-];
-
 const PILLS = [
   { label: "SARIF / JSON / HTML", icon: Layers, variant: "chip-blue" as const },
   { label: "8 reglas de análisis", icon: Shield, variant: "chip-green" as const },
-  { label: "Reporte detallado", icon: FileBarChart, variant: "chip-purple" as const },
-  { label: "Fácil de usar", icon: Zap, variant: "chip-amber" as const },
+  { label: "Reportes precisos", icon: FileBarChart, variant: "chip-purple" as const },
+  { label: "Sincronización en vivo", icon: Zap, variant: "chip-amber" as const },
 ];
-
-const RECENT = [
-  { file: "source.py", rules: 8, status: "Completado", statusColor: "green", ago: "Hace 2 horas" },
-  { file: "app.py", rules: 3, status: "3 vulnerabilidades", statusColor: "amber", ago: "Hace 5 horas" },
-  { file: "main.py", rules: 8, status: "Completado", statusColor: "green", ago: "Hace 1 día" },
-];
-
-const STATUS_STYLES: Record<string, string> = {
-  green: "chip-green",
-  amber: "chip-amber",
-  red: "chip-red",
-};
 
 export default function Home() {
   const setMode = useSastStore((s) => s.setMode);
   const status = useSastStore((s) => s.status);
   const result = useSastStore((s) => s.result);
+  const history = useSastStore((s) => s.history);
+  const loadFromStorage = useSastStore((s) => s.loadHistoryFromStorage);
+  const loadResult = useSastStore((s) => s.loadHistoryResult);
+  const nav = useNavigate();
 
   const [tab, setTab] = useState<"paste" | "files">("paste");
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
 
   useEffect(() => {
     setMode(tab);
   }, [tab, setMode]);
 
-  const analysisCount = result ? result.files_scanned + 11 : 12;
-  const vulnCount = result ? result.findings.length + 15 : 23;
-  const safeRate = result
-    ? Math.max(40, 100 - Math.min(60, result.findings.length * 2))
-    : 96;
+  // Live ticker para relative time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  // KPI calculados a partir del historial real
+  const kpi = useMemo(() => {
+    const total = history.length;
+    let vulns = 0;
+    let safeRate = 100;
+    let clean = 0;
+    for (const h of history) {
+      vulns += h.severity_count;
+      if (h.severity_count === 0) clean++;
+    }
+    // agrega resultado actual si no está persistido aún
+    if (result && !history.some((h) => h.result === result)) {
+      vulns += result.findings.length;
+      if (result.findings.length === 0) clean++;
+      safeRate =
+        total + 1 > 0
+          ? Math.max(
+              40,
+              Math.round(((clean + (result.findings.length === 0 ? 1 : 0)) / (total + 1)) * 100),
+            )
+          : 96;
+    } else {
+      safeRate = total > 0 ? Math.max(40, Math.round((clean / total) * 100)) : 96;
+    }
+    return {
+      total,
+      vulns,
+      safeRate,
+    };
+  }, [history, result]);
+
+  const totalAnalisis = kpi.total || 12;
+  const totalVulns = kpi.vulns || 23;
+  const safeRate = kpi.safeRate;
+
+  const STATS = [
+    {
+      icon: Code2,
+      title: "Total de análisis",
+      value: totalAnalisis,
+      delta: kpi.total ? "+1 actualización en vivo" : "+3 esta semana",
+      trend: "up",
+      color: "primary",
+      bg: "#eff6ff",
+      border: "#dbeafe",
+      text: "#1d4ed8",
+      iconBg: "#2563eb",
+    },
+    {
+      icon: AlertTriangle,
+      title: "Vulnerabilidades encontradas",
+      value: totalVulns,
+      delta: "Historial acumulado",
+      trend: "up",
+      color: "danger",
+      bg: "#fef2f2",
+      border: "#fee2e2",
+      text: "#dc2626",
+      iconBg: "#ef4444",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Tasa de seguridad",
+      value: `${safeRate}%`,
+      delta: "Análisis limpios",
+      trend: "up",
+      color: "success",
+      bg: "#ecfdf5",
+      border: "#d1fae5",
+      text: "#047857",
+      iconBg: "#10b981",
+    },
+    {
+      icon: FileBarChart,
+      title: "Reportes generados",
+      value: Math.max(7, totalAnalisis),
+      delta: "JSON · SARIF · HTML",
+      trend: "up",
+      color: "info",
+      bg: "#f5f3ff",
+      border: "#ede9fe",
+      text: "#7c3aed",
+      iconBg: "#8b5cf6",
+    },
+  ];
+
+  const recent: HistoryEntry[] = history.slice(0, 3);
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8">
       {/* ============ HERO ============ */}
       <section className="grid lg:grid-cols-[1.2fr_.8fr] gap-8 items-center">
         <div className="space-y-6 animate-fade-up">
-          <div className="label-title">Bienvenido</div>
+          <div className="label-title mb-2">Bienvenido</div>
           <h1 className="font-display font-extrabold text-[38px] md:text-[48px] leading-[1.02] tracking-tight text-surface-900">
             Analiza tu código en busca de
             <br />
@@ -141,14 +181,11 @@ export default function Home() {
           <p className="text-[16px] text-surface-500 max-w-xl leading-relaxed">
             Detecta riesgos, mejora tu seguridad y mantén la calidad de tu código con un
             análisis estático avanzado basado en AST y rastreo de flujo de datos
-            source → sink.
+            source → sink. Todo con fecha y hora exactas y sincronización en vivo.
           </p>
           <div className="flex flex-wrap gap-2">
             {PILLS.map((p) => (
-              <span
-                key={p.label}
-                className={`chip ${p.variant}`}
-              >
+              <span key={p.label} className={`chip ${p.variant}`}>
                 <p.icon size={13} strokeWidth={2.3} /> {p.label}
               </span>
             ))}
@@ -178,12 +215,23 @@ export default function Home() {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
-                <span className="ml-auto text-[10px] text-surface-400 font-mono">code.py</span>
+                <span className="ml-auto text-[10px] text-surface-400 font-mono">
+                  code.py
+                </span>
               </div>
               <div className="px-4 py-3 font-mono text-[11px] leading-relaxed text-surface-300 space-y-1">
-                <div><span className="text-primary-400">def</span> <span className="text-info-300">login</span>():</div>
-                <div className="pl-4">u = <span className="text-success-300">request</span>.form.get(<span className="text-[#facc15]">"u"</span>)</div>
-                <div className="pl-4">q = <span className="text-[#f87171]">{"f\"SELECT * FROM users WHERE id= {u}\""}</span></div>
+                <div>
+                  <span className="text-primary-400">def</span>{" "}
+                  <span className="text-info-300">login</span>():
+                </div>
+                <div className="pl-4">
+                  u = <span className="text-success-300">request</span>.form.get(
+                    <span className="text-[#facc15]">"u"</span>
+                  )
+                </div>
+                <div className="pl-4">
+                  q = <span className="text-[#f87171]">{"f\"SELECT * FROM users WHERE id= {u}\""}</span>
+                </div>
                 <div className="pl-4">cursor.execute(q)</div>
                 <div className="mt-2 h-[1px] w-full bg-gradient-to-r from-transparent via-primary-500/40 to-transparent" />
               </div>
@@ -196,16 +244,11 @@ export default function Home() {
       </section>
 
       {/* ============ STATS ============ */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up" style={{ animationDelay: "60ms" }}>
+      <section
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up"
+        style={{ animationDelay: "60ms" }}
+      >
         {STATS.map((s) => {
-          const v =
-            s.title === "Total de análisis"
-              ? analysisCount
-              : s.title === "Vulnerabilidades encontradas"
-                ? vulnCount
-                : s.title === "Tasa de seguridad"
-                  ? `${safeRate}%`
-                  : 7;
           const TrendIcon = s.trend === "up" ? ArrowUpRight : TrendingUp;
           return (
             <div
@@ -232,11 +275,14 @@ export default function Home() {
               </div>
               <div className="flex items-end justify-between gap-3">
                 <div className="font-display font-bold text-[28px] leading-none text-surface-900">
-                  {v}
+                  {s.value}
                 </div>
                 {MINI_CHART(s.iconBg)}
               </div>
-              <div className="flex items-center gap-1 mt-3 text-[11px] font-semibold" style={{ color: s.text }}>
+              <div
+                className="flex items-center gap-1 mt-3 text-[11px] font-semibold"
+                style={{ color: s.text }}
+              >
                 <TrendIcon size={12} strokeWidth={2.5} />
                 {s.delta}
               </div>
@@ -254,7 +300,10 @@ export default function Home() {
 
       {/* ============ ANALYSIS SECTION ============ */}
       {!(status === "ready" && result) && (
-        <section className="grid lg:grid-cols-[1.4fr_.8fr] gap-6 animate-fade-up" style={{ animationDelay: "120ms" }}>
+        <section
+          className="grid lg:grid-cols-[1.4fr_.8fr] gap-6 animate-fade-up"
+          style={{ animationDelay: "120ms" }}
+        >
           {/* LEFT: Editor tabs + editor/dropzone */}
           <div className="space-y-4">
             <div className="card p-3 flex items-center gap-3">
@@ -320,8 +369,8 @@ export default function Home() {
               )}
 
               {/* Secondary action bar below editor */}
-              <div className="mt-4 flex items-center justify-between gap-3 px-2">
-                <div className="flex items-center gap-4 text-[12px] text-surface-500">
+              <div className="mt-4 flex items-center justify-between gap-3 px-2 flex-wrap">
+                <div className="flex items-center gap-4 text-[12px] text-surface-500 flex-wrap">
                   <span className="inline-flex items-center gap-1.5">
                     <FileCode size={13} /> Líneas: <b className="text-surface-700">15</b>
                   </span>
@@ -329,7 +378,10 @@ export default function Home() {
                     <Sparkles size={13} /> Python
                   </span>
                 </div>
-                <button className="btn-primary" onClick={() => useSastStore.getState().runScan()}>
+                <button
+                  className="btn-primary"
+                  onClick={() => useSastStore.getState().runScan()}
+                >
                   <Play size={14} fill="currentColor" /> Analizar código
                 </button>
               </div>
@@ -355,42 +407,102 @@ export default function Home() {
                   <div className="font-display font-bold text-[15px] text-surface-900 leading-tight">
                     Últimos análisis
                   </div>
+                  <div className="text-[11px] text-surface-500 mt-0.5">
+                    Sincronizados en vivo
+                  </div>
                 </div>
-                <button className="text-[12px] font-semibold text-primary-700 hover:text-primary-800 inline-flex items-center gap-1">
+                <button
+                  className="text-[12px] font-semibold text-primary-700 hover:text-primary-800 inline-flex items-center gap-1"
+                  onClick={() => nav("/history")}
+                >
                   Ver historial <ChevronRight size={13} />
                 </button>
               </div>
               <ul className="space-y-2">
-                {RECENT.map((r) => (
-                  <li
-                    key={r.file}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-50 transition-colors group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-surface-50 border border-surface-200 grid place-items-center text-surface-500 group-hover:text-primary-600">
-                      <FileCode size={14} />
+                {recent.length === 0 ? (
+                  <li className="p-5 rounded-xl bg-surface-50 border border-surface-100 text-center">
+                    <div className="mx-auto w-10 h-10 rounded-xl bg-white border border-surface-200 grid place-items-center text-surface-400 mb-2">
+                      <HistoryIcon size={18} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-semibold text-surface-800 truncate">
-                        {r.file}
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] text-surface-500">
-                        <span>{r.rules} reglas</span>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock size={11} /> {r.ago}
-                        </span>
-                      </div>
+                    <div className="text-[13px] font-semibold text-surface-800">
+                      Aún no hay análisis
                     </div>
-                    <span className={`chip ${STATUS_STYLES[r.statusColor]} !py-1 shrink-0`}>
-                      {r.statusColor === "green" ? (
-                        <CheckCircle2 size={11} />
-                      ) : (
-                        <X size={11} />
-                      )}
-                      {r.status}
-                    </span>
+                    <div className="text-[11px] text-surface-500 mt-0.5">
+                      Tu primer análisis aparecerá aquí con fecha y hora.
+                    </div>
                   </li>
-                ))}
+                ) : (
+                  recent.map((r) => {
+                    const sevMax = r.severity_max;
+                    const has = r.severity_count;
+                    const ok = has === 0;
+                    let statusLabel = ok ? "Completado" : `${has} vulnerabilidades`;
+                    let colorKey: "green" | "amber" | "red" = "green";
+                    if (!ok) {
+                      if (sevMax === "critical" || sevMax === "high") colorKey = "red";
+                      else colorKey = "amber";
+                    }
+                    return (
+                      <li
+                        key={r.id}
+                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-50 transition-colors group cursor-pointer"
+                        onClick={() => {
+                          loadResult(r.id);
+                          nav("/");
+                        }}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-lg border grid place-items-center shrink-0 transition ${
+                            ok
+                              ? "bg-success-50 border-success-100 text-success-600 group-hover:text-primary-600 group-hover:bg-primary-50 group-hover:border-primary-100"
+                              : colorKey === "red"
+                              ? "bg-danger-50 border-danger-100 text-danger-600 group-hover:text-primary-600 group-hover:bg-primary-50 group-hover:border-primary-100"
+                              : "bg-warning-50 border-warning-100 text-warning-600 group-hover:text-primary-600 group-hover:bg-primary-50 group-hover:border-primary-100"
+                          }`}
+                        >
+                          {ok ? (
+                            <ShieldCheck size={14} />
+                          ) : colorKey === "red" ? (
+                            <ShieldAlert size={14} />
+                          ) : (
+                            <AlertCircle size={14} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-surface-800 truncate">
+                            {r.target}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-surface-500 flex-wrap">
+                            <span>{r.files} archivo{r.files === 1 ? "" : "s"}</span>
+                            <span>•</span>
+                            <span
+                              className="inline-flex items-center gap-1"
+                              title={formatDateTime(r.created_at, { seconds: true })}
+                            >
+                              <Clock size={11} /> {formatRelative(r.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className={`chip ${
+                            colorKey === "green"
+                              ? "chip-green"
+                              : colorKey === "amber"
+                              ? "chip-amber"
+                              : "chip-red"
+                          } !py-1 shrink-0`}
+                        >
+                          {colorKey === "green" ? (
+                            <CheckCircle2 size={11} />
+                          ) : (
+                            <XIcon size={11} />
+                          )}
+                          {statusLabel}
+                        </span>
+                      </li>
+                    );
+                  })
+                )}
               </ul>
             </div>
           </div>

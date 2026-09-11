@@ -1,8 +1,15 @@
-import { startTransition, useEffect, useRef, useState } from "react";
-import CodeMirror from "@uiw/react-codemirror";
-import { python } from "@codemirror/lang-python";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSastStore } from "../store/sast";
 import { CheckCircle2, Sparkles } from "lucide-react";
+
+const PLACEHOLDER = `# Pega tu código Python aquí y pulsa "Analizar"
+#
+# Ejemplo rápido:
+# username = input("Usuario: ")
+# query = "SELECT * FROM users WHERE name = '" + username + "'"
+# cursor.execute(query)
+#
+# 💡 Consejo: clica en "Cargar ejemplo demo" para ver TODAS las detecciones a la vez.`;
 
 export default function CodeEditor() {
   const value = useSastStore((s) => s.pasteValue);
@@ -11,12 +18,13 @@ export default function CodeEditor() {
   const loadDemo = useSastStore((s) => s.loadDemo);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const gutterRef = useRef<HTMLDivElement | null>(null);
   const [justLoaded, setJustLoaded] = useState(false);
 
-  // Escucha evento custom del store cuando loadDemo() se dispara desde fuera
   useEffect(() => {
     const onDemo = () => {
-      startTransition(() => setJustLoaded(true));
+      setJustLoaded(true);
       try {
         const raf = () =>
           rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -24,17 +32,24 @@ export default function CodeEditor() {
           window.setTimeout(() => window.requestAnimationFrame(raf), 0);
         }
       } catch {}
-      const t = window.setTimeout(() => startTransition(() => setJustLoaded(false)), 3200);
+      const t = window.setTimeout(() => setJustLoaded(false), 3200);
       return () => window.clearTimeout(t);
     };
     window.addEventListener("sast:load-demo", onDemo);
     return () => window.removeEventListener("sast:load-demo", onDemo);
   }, []);
 
-  const lines = value ? value.split("\n").length : 0;
+  const lines = useMemo(() => (value ? value.split("\n").length : 0), [value]);
+
+  const gutterContent = useMemo(() => {
+    const n = Math.max(1, lines);
+    let out = "";
+    for (let i = 1; i <= n; i++) out += i + "\n";
+    return out;
+  }, [lines]);
 
   const handleLoad = () => {
-    startTransition(() => setJustLoaded(true));
+    setJustLoaded(true);
     try {
       const raf = () =>
         rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -43,11 +58,21 @@ export default function CodeEditor() {
       }
     } catch {}
     if (typeof window !== "undefined") {
-      window.setTimeout(() => startTransition(() => loadDemo()), 0);
+      window.setTimeout(() => loadDemo(), 0);
     } else {
-      startTransition(() => loadDemo());
+      loadDemo();
     }
-    window.setTimeout(() => startTransition(() => setJustLoaded(false)), 3200);
+    window.setTimeout(() => setJustLoaded(false), 3200);
+  };
+
+  const onScroll = () => {
+    if (taRef.current && gutterRef.current) {
+      gutterRef.current.scrollTop = taRef.current.scrollTop;
+    }
+  };
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(e.target.value, filename);
   };
 
   return (
@@ -81,24 +106,29 @@ export default function CodeEditor() {
             </button>
           </div>
         </div>
-        <CodeMirror
-          value={value}
-          height="460px"
-          extensions={[python()]}
-          placeholder={`# Pega tu código Python aquí y pulsa "Analizar"\n#\n# Ejemplo rápido:\n# username = input("Usuario: ")\n# query = "SELECT * FROM users WHERE name = '" + username + "'"\n# cursor.execute(query)\n#\n# 💡 Consejo: clica en "Cargar ejemplo demo" para ver TODAS las detecciones a la vez.`}
-          onChange={(v) => setValue(v, filename)}
-          basicSetup={{
-            lineNumbers: true,
-            foldGutter: true,
-            highlightActiveLineGutter: true,
-            highlightActiveLine: true,
-            bracketMatching: true,
-            closeBrackets: true,
-            autocompletion: true,
-          }}
-          className="text-[13px] font-mono"
-          style={{ background: "#ffffff", color: "#0f172a" }}
-        />
+        <div className="flex" style={{ height: 460 }}>
+          <div
+            ref={gutterRef}
+            className="select-none overflow-hidden bg-surface-50 border-r border-surface-100 text-right text-[11px] leading-6 text-surface-400 font-mono py-3 px-2 whitespace-pre"
+            style={{ minWidth: 52, width: 52 }}
+          >
+            {gutterContent}
+          </div>
+          <textarea
+            ref={taRef}
+            value={value}
+            placeholder={PLACEHOLDER}
+            onChange={onChange}
+            onScroll={onScroll}
+            spellCheck={false}
+            className="flex-1 resize-none outline-none bg-white text-[13px] leading-6 font-mono font-normal text-surface-800 placeholder:text-surface-300 p-3 whitespace-pre"
+            wrap="off"
+          />
+        </div>
+        <div className="px-4 py-2 border-t border-surface-100 bg-surface-50 text-[11px] text-surface-500 flex items-center justify-between">
+          <span className="font-mono">Líneas: {lines}</span>
+          <span className="font-mono">Python · {filename || "source.py"}</span>
+        </div>
       </div>
     </div>
   );

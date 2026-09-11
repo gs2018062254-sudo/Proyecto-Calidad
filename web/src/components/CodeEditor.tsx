@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { useSastStore } from "../store/sast";
@@ -16,7 +16,7 @@ export default function CodeEditor() {
   // Escucha evento custom del store cuando loadDemo() se dispara desde fuera
   useEffect(() => {
     const onDemo = () => {
-      setJustLoaded(true);
+      startTransition(() => setJustLoaded(true));
       try {
         const raf = () =>
           rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -24,7 +24,7 @@ export default function CodeEditor() {
           window.setTimeout(() => window.requestAnimationFrame(raf), 0);
         }
       } catch {}
-      const t = window.setTimeout(() => setJustLoaded(false), 3200);
+      const t = window.setTimeout(() => startTransition(() => setJustLoaded(false)), 3200);
       return () => window.clearTimeout(t);
     };
     window.addEventListener("sast:load-demo", onDemo);
@@ -34,7 +34,7 @@ export default function CodeEditor() {
   const lines = value ? value.split("\n").length : 0;
 
   const handleLoad = () => {
-    setJustLoaded(true);
+    startTransition(() => setJustLoaded(true));
     try {
       const raf = () =>
         rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -42,13 +42,12 @@ export default function CodeEditor() {
         window.setTimeout(() => window.requestAnimationFrame(raf), 0);
       }
     } catch {}
-    // Cargar demo después de cualquier animación/paint para evitar Suspense sync
     if (typeof window !== "undefined") {
-      window.setTimeout(() => loadDemo(), 0);
+      window.setTimeout(() => startTransition(() => loadDemo()), 0);
     } else {
-      loadDemo();
+      startTransition(() => loadDemo());
     }
-    window.setTimeout(() => setJustLoaded(false), 3200);
+    window.setTimeout(() => startTransition(() => setJustLoaded(false)), 3200);
   };
 
   return (

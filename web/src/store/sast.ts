@@ -330,10 +330,9 @@ export const useSastStore = create<SastStore>((set, get) => {
     },
 
     loadDemo: () => {
-      const apply = () =>
+      const prepare = () =>
         set({
           mode: "paste",
-          pasteValue: DEMO_SOURCE,
           pasteFilename: "demo.py",
           status: "idle",
           result: null,
@@ -345,20 +344,28 @@ export const useSastStore = create<SastStore>((set, get) => {
           nativeFiles: [],
           files: [],
         });
+      const applyContent = () =>
+        set({
+          pasteValue: DEMO_SOURCE,
+        });
       if (typeof window !== "undefined") {
         try {
           window.setTimeout(() => {
-            apply();
+            prepare();
             try {
               window.dispatchEvent(
                 new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }),
               );
             } catch {}
+            window.setTimeout(() => {
+              applyContent();
+            }, 150);
           }, 0);
           return;
         } catch {}
       }
-      apply();
+      prepare();
+      applyContent();
     },
     reset: () =>
       set({

@@ -77,8 +77,12 @@ export interface UploadedFile {
   content: string;
 }
 
+export type ReportFormat = "sarif" | "json" | "html";
+
 export interface ScanOptions {
   min_confidence: number;
-  min_severity: Exclude<Severity, "all">;
+  min_severity: Severity;
   exclude_tests: boolean;
+  ruleset?: string;
+  report_formats: ReportFormat[];
 }

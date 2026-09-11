@@ -57,8 +57,10 @@ export const useSastStore = create<SastStore>((set, get) => ({
   nativeFiles: [],
   options: {
     min_confidence: 0,
-    min_severity: "info",
-    exclude_tests: true,
+    min_severity: "all",
+    exclude_tests: false,
+    ruleset: "all",
+    report_formats: ["sarif"],
   },
   status: "idle",
   progressStage: 0,

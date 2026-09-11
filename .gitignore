@@ -1,0 +1,48 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+ENV/
+.Python
+
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Node / Vite ===
+node_modules/
+web/node_modules/
+.DS_Store
+*.local
+.vite/
+
+# === Build artifacts (frontend build goes to ../dist which is used by Vercel) ===
+# NOTA: NO ignoramos /dist porque Vercel lo necesita para el deploy.
+# Si prefieres no commitear el build, descomenta la línea siguiente:
+# /dist
+
+# === SAST temp / reports ===
+*.tmp.*
+sast_report_*.json
+sast_report_*.html
+
+# === OS ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# === Vercel (opcional - contiene project.json con tu id, suele ser seguro commitearlo) ===
+# .vercel

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAST Security Report - samples\vulnerable_sample.py</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --critical: #ef4444;
+    --critical-bg: rgba(239,68,68,0.15);
+    --high: #f97316;
+    --high-bg: rgba(249,115,22,0.15);
+    --medium: #eab308;
+    --medium-bg: rgba(234,179,8,0.15);
+    --low: #22c55e;
+    --low-bg: rgba(34,197,94,0.15);
+    --info: #3b82f6;
+    --info-bg: rgba(59,130,246,0.15);
+    --accent: #6366f1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .header-top { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .shield {
+    width: 56px; height: 56px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .header h1 { font-size: 28px; font-weight: 800; }
+  .header .subtitle { color: var(--text-dim); margin-top: 4px; }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-top: 20px;
+  }
+  .meta-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .meta-card .label { font-size: 11px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px; }
+  .meta-card .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+
+  .summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .summary h2 { margin-bottom: 20px; font-size: 18px; }
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 12px; margin-bottom: 20px;
+  }
+  @media (max-width: 700px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+  .sev-card {
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid transparent;
+  }
+  .sev-card.critical { background: var(--critical-bg); border-color: var(--critical); }
+  .sev-card.high { background: var(--high-bg); border-color: var(--high); }
+  .sev-card.medium { background: var(--medium-bg); border-color: var(--medium); }
+  .sev-card.low { background: var(--low-bg); border-color: var(--low); }
+  .sev-card.info { background: var(--info-bg); border-color: var(--info); }
+  .sev-card .count { font-size: 32px; font-weight: 800; }
+  .sev-card .label { font-size: 12px; text-transform: uppercase; opacity: 0.8; margin-top: 4px; }
+
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+    padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  .filter-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { background: var(--border); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); }
+
+  .findings { }
+  .findings h2 { margin-bottom: 20px; font-size: 18px; }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: all 0.15s;
+  }
+  .finding:hover { border-color: var(--accent); }
+  .finding-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .finding-sev {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .finding-sev.critical { background: var(--critical-bg); }
+  .finding-sev.high { background: var(--high-bg); }
+  .finding-sev.medium { background: var(--medium-bg); }
+  .finding-sev.low { background: var(--low-bg); }
+  .finding-sev.info { background: var(--info-bg); }
+
+  .finding-main { flex: 1; min-width: 0; }
+  .finding-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .finding-meta {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--surface-2);
+  }
+  .badge.sev-critical { background: var(--critical-bg); color: var(--critical); }
+  .badge.sev-high { background: var(--high-bg); color: var(--high); }
+  .badge.sev-medium { background: var(--medium-bg); color: var(--medium); }
+  .badge.sev-low { background: var(--low-bg); color: var(--low); }
+  .badge.sev-info { background: var(--info-bg); color: var(--info); }
+  .badge.rule { background: var(--info-bg); color: var(--info); }
+
+  .confidence-bar {
+    width: 80px; height: 6px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .confidence-fill { height: 100%; border-radius: 3px; }
+
+  .toggle { color: var(--text-dim); font-size: 18px; transition: transform 0.2s; }
+  .finding.open .toggle { transform: rotate(90deg); }
+
+  .finding-body {
+    display: none;
+    padding: 0 20px 20px 82px;
+  }
+  .finding.open .finding-body { display: block; }
+  .finding-body h4 {
+    font-size: 13px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 14px 0 8px;
+  }
+  .finding-body h4:first-child { margin-top: 0; }
+  .finding-body p { font-size: 14px; color: var(--text); margin-bottom: 8px; }
+  pre.code {
+    background: #0b1120;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #cbd5e1;
+  }
+  .dataflow-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  .dataflow-list li {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--accent);
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+  .recommendation-box {
+    background: rgba(99,102,241,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  .recommendation-box::before {
+    content: "💡 ";
+    font-weight: 700;
+  }
+
+  .footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    padding: 32px 0 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-top">
+      <div class="shield">🛡️</div>
+      <div>
+        <h1>Informe de Seguridad SAST</h1>
+        <div class="subtitle">Análisis Estático de Código Fuente</div>
+      </div>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-card"><div class="label">Objetivo</div><div class="value" title="samples\vulnerable_sample.py">samples\vulnerable_sample.py</div></div>
+      <div class="meta-card"><div class="label">Versión SAST</div><div class="value">0.1.0</div></div>
+      <div class="meta-card"><div class="label">Archivos Analizados</div><div class="value">1</div></div>
+      <div class="meta-card"><div class="label">Duración</div><div class="value">0.28s</div></div>
+      <div class="meta-card"><div class="label">Fecha</div><div class="value" style="font-size:14px">2026-09-09 23:51:33 UTC</div></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <h2>📊 Resumen de Vulnerabilidades</h2>
+    <div class="summary-grid">
+      <div class="sev-card critical"><div class="count">13</div><div class="label">Crítico</div></div>
+      <div class="sev-card high"><div class="count">27</div><div class="label">Alto</div></div>
+      <div class="sev-card medium"><div class="count">4</div><div class="label">Medio</div></div>
+      <div class="sev-card low"><div class="count">0</div><div class="label">Bajo</div></div>
+      <div class="sev-card info"><div class="count">7</div><div class="label">Info</div></div>
+    </div>
+    <div class="filters">
+      <span style="font-size:13px;color:var(--text-dim);align-self:center;margin-right:4px">Filtrar:</span>
+      <button class="filter-btn active" onclick="filterFindings('all')">Todas (51)</button>
+      <button class="filter-btn" onclick="filterFindings('critical')">🔴 Crítico (13)</button>
+      <button class="filter-btn" onclick="filterFindings('high')">🟠 Alto (27)</button>
+      <button class="filter-btn" onclick="filterFindings('medium')">🟡 Medio (4)</button>
+      <button class="filter-btn" onclick="filterFindings('low')">🟢 Bajo (0)</button>
+      <button class="filter-btn" onclick="filterFindings('info')">🔵 Info (7)</button>
+    </div>
+  </div>
+
+  <div class="findings">
+    <h2>🔍 Hallazgos de Seguridad</h2>
+    
+    
+  <div class="finding" data-severity="critical" id="finding-0" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(0)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección SQL</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">SQL_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-89</span></a>
+          <span>📄 samples\vulnerable_sample.py:45 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;username&#x27; (línea 38) alcanza el método SQL &#x27;cursor.execute&#x27; (línea 45) sin sanitización adecuada.</p><h4>Evidencia (línea 45)</h4><pre class="code">    cursor.execute(query)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 38 → <strong>username</strong></li><li>[2] Línea 19 → <strong>query</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Usa consultas parametrizadas (prepared statements) con placeholders en lugar de concatenar strings. Evita construir SQL dinámicamente con entrada del usuario.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-1" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(1)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección SQL</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">SQL_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-89</span></a>
+          <span>📄 samples\vulnerable_sample.py:49 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;username&#x27; (línea 38) alcanza el método SQL &#x27;cursor.execute&#x27; (línea 49) sin sanitización adecuada.</p><h4>Evidencia (línea 49)</h4><pre class="code">    cursor.execute(query2)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 38 → <strong>username</strong></li><li>[2] Línea 19 → <strong>query2</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Usa consultas parametrizadas (prepared statements) con placeholders en lugar de concatenar strings. Evita construir SQL dinámicamente con entrada del usuario.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-2" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(2)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección SQL</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">SQL_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-89</span></a>
+          <span>📄 samples\vulnerable_sample.py:54 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;safe_param&#x27; (línea 52) alcanza el método SQL &#x27;cursor.execute&#x27; (línea 54) sin sanitización adecuada.</p><h4>Evidencia (línea 54)</h4><pre class="code">    cursor.execute(query3)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 52 → <strong>safe_param</strong></li><li>[2] Línea 19 → <strong>query3</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Usa consultas parametrizadas (prepared statements) con placeholders en lugar de concatenar strings. Evita construir SQL dinámicamente con entrada del usuario.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-3" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(3)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:64 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;host&#x27; (línea 63) alcanza la ejecución de comando &#x27;os.system&#x27; (línea 64).</p><h4>Evidencia (línea 64)</h4><pre class="code">    os.system(f&quot;ping -c 4 {host}&quot;)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 63 → <strong>host</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-4" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(4)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:69 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;user_cmd&#x27; (línea 68) alcanza la ejecución de comando &#x27;subprocess.run&#x27; (línea 69).</p><h4>Evidencia (línea 69)</h4><pre class="code">    subprocess.run(user_cmd, shell=True, check=True)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 68 → <strong>user_cmd</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-5" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(5)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:70 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;user_cmd&#x27; (línea 68) alcanza la ejecución de comando &#x27;subprocess.Popen&#x27; (línea 70).</p><h4>Evidencia (línea 70)</h4><pre class="code">    subprocess.Popen(&quot;ls &quot; + user_cmd, shell=True)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 68 → <strong>user_cmd</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-6" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(6)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:71 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;user_cmd&#x27; (línea 68) alcanza la ejecución de comando &#x27;subprocess.call&#x27; (línea 71).</p><h4>Evidencia (línea 71)</h4><pre class="code">    subprocess.call(&quot;grep &quot; + user_cmd, shell=True)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 68 → <strong>user_cmd</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-7" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(7)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:72 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;user_cmd&#x27; (línea 68) alcanza la ejecución de comando &#x27;subprocess.check_output&#x27; (línea 72).</p><h4>Evidencia (línea 72)</h4><pre class="code">    subprocess.check_output(f&quot;cat {user_cmd}&quot;, shell=True)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 68 → <strong>user_cmd</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-8" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(8)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: eval()</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/95.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-95</span></a>
+          <span>📄 samples\vulnerable_sample.py:77 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>eval() ejecuta código Python arbitrario. Nunca lo uses con entrada del usuario.</p><h4>Evidencia (línea 77)</h4><pre class="code">    eval(data)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-9" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(9)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:77 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;data&#x27; (línea 76) alcanza la ejecución de comando &#x27;eval&#x27; (línea 77).</p><h4>Evidencia (línea 77)</h4><pre class="code">    eval(data)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 76 → <strong>data</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-10" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(10)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: exec()</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/95.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-95</span></a>
+          <span>📄 samples\vulnerable_sample.py:78 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>exec() ejecuta código Python arbitrario. Nunca lo uses con entrada del usuario.</p><h4>Evidencia (línea 78)</h4><pre class="code">    exec(data)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-11" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(11)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Inyección de Comandos</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">COMMAND_INJECTION</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:78 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;data&#x27; (línea 76) alcanza la ejecución de comando &#x27;exec&#x27; (línea 78).</p><h4>Evidencia (línea 78)</h4><pre class="code">    exec(data)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 76 → <strong>data</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada.</div></div>
+  </div>
+
+  <div class="finding" data-severity="critical" id="finding-12" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(12)">
+    <div class="finding-header">
+      <div class="finding-sev critical">🔴</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: pickle.loads()</div>
+        <div class="finding-meta">
+          <span class="badge sev-critical">CRITICAL</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-502</span></a>
+          <span>📄 samples\vulnerable_sample.py:84 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>pickle.loads() ejecuta código al deserializar. Nunca cargues pickles de fuentes no confiables.</p><h4>Evidencia (línea 84)</h4><pre class="code">    pickle.loads(raw)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-13" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(13)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:24 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 24)</h4><pre class="code">API_KEY = &quot;sk-abcdefghijklmnopqrstuvwxyz1234567890&quot;</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-14" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(14)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:25 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 25)</h4><pre class="code">APP_SECRET = &quot;super_secret_password_123!&quot;</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-15" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(15)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:26 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">98%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:98%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 26)</h4><pre class="code">AWS_ACCESS_KEY_ID = &quot;AKIAIOSFODNN7EXAMPLE&quot;</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-16" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(16)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:27 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 27)</h4><pre class="code">DB_URL = &quot;postgres://admin:password123@localhost:5432/prod&quot;</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-17" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(17)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:28 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 28)</h4><pre class="code">GITHUB_TOKEN = &quot;ghp_abcdefghijklmnopqrstuvwxyz0123456789&quot;</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-18" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(18)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Secreto Hardcodeado</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">HARDCODED_SECRET</span> <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-798</span></a>
+          <span>📄 samples\vulnerable_sample.py:29 &nbsp;•&nbsp; 🛡️ A7:2021-Identification and Authentication Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">98%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:98%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>Se detectó una posible credencial o clave secreta escrita directamente en el código fuente.</p><h4>Evidencia (línea 29)</h4><pre class="code">PRIVATE_KEY = &quot;&quot;&quot;-----BEGIN RSA PRIVATE KEY-----</pre><h4>Recomendación</h4><div class="recommendation-box">Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-19" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(19)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Uso de shell=True en subprocess</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">SHELL_TRUE</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:69 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">92%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:92%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El uso de shell=True con subprocess permite la interpretación de metacaracteres de shell y es un vector común para inyección de comandos.</p><h4>Evidencia (línea 69)</h4><pre class="code">    subprocess.run(user_cmd, shell=True, check=True)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa shell=False (predeterminado) y pasa los argumentos como una lista en lugar de un string.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-20" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(20)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Uso de shell=True en subprocess</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">SHELL_TRUE</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:70 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">92%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:92%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El uso de shell=True con subprocess permite la interpretación de metacaracteres de shell y es un vector común para inyección de comandos.</p><h4>Evidencia (línea 70)</h4><pre class="code">    subprocess.Popen(&quot;ls &quot; + user_cmd, shell=True)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa shell=False (predeterminado) y pasa los argumentos como una lista en lugar de un string.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-21" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(21)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Uso de shell=True en subprocess</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">SHELL_TRUE</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:71 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">92%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:92%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El uso de shell=True con subprocess permite la interpretación de metacaracteres de shell y es un vector común para inyección de comandos.</p><h4>Evidencia (línea 71)</h4><pre class="code">    subprocess.call(&quot;grep &quot; + user_cmd, shell=True)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa shell=False (predeterminado) y pasa los argumentos como una lista en lugar de un string.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-22" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(22)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Uso de shell=True en subprocess</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">SHELL_TRUE</span> <a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-78</span></a>
+          <span>📄 samples\vulnerable_sample.py:72 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">92%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:92%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El uso de shell=True con subprocess permite la interpretación de metacaracteres de shell y es un vector común para inyección de comandos.</p><h4>Evidencia (línea 72)</h4><pre class="code">    subprocess.check_output(f&quot;cat {user_cmd}&quot;, shell=True)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa shell=False (predeterminado) y pasa los argumentos como una lista en lugar de un string.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-23" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(23)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: compile()</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/95.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-95</span></a>
+          <span>📄 samples\vulnerable_sample.py:79 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">70%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:70%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>compile() puede ser usado para ejecutar código dinámico.</p><h4>Evidencia (línea 79)</h4><pre class="code">    compile(data, &quot;&lt;string&gt;&quot;, &quot;exec&quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-24" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(24)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: yaml.load()</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-502</span></a>
+          <span>📄 samples\vulnerable_sample.py:85 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>yaml.load() sin Loader seguro puede ejecutar código. Usa yaml.safe_load().</p><h4>Evidencia (línea 85)</h4><pre class="code">    yaml.load(raw)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-25" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(25)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: marshal.loads()</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-502</span></a>
+          <span>📄 samples\vulnerable_sample.py:86 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>marshal.loads() no es seguro contra datos maliciosos.</p><h4>Evidencia (línea 86)</h4><pre class="code">    marshal.loads(raw)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-26" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(26)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: shelve.open()</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-502</span></a>
+          <span>📄 samples\vulnerable_sample.py:87 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">80%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:80%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>shelve usa pickle internamente. No abras shelves de fuentes no confiables.</p><h4>Evidencia (línea 87)</h4><pre class="code">    shelve.open(&quot;data.bin&quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-27" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(27)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Path Traversal</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">PATH_TRAVERSAL</span> <a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-22</span></a>
+          <span>📄 samples\vulnerable_sample.py:97 &nbsp;•&nbsp; 🛡️ A01:2021-Broken Access Control</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;filename&#x27; (línea 95) alcanza la operación de archivo &#x27;open&#x27; (línea 97).</p><h4>Evidencia (línea 97)</h4><pre class="code">    with open(full_path, &quot;rb&quot;) as f:</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 95 → <strong>filename</strong></li><li>[2] Línea 19 → <strong>full_path</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-28" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(28)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Path Traversal</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">PATH_TRAVERSAL</span> <a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-22</span></a>
+          <span>📄 samples\vulnerable_sample.py:103 &nbsp;•&nbsp; 🛡️ A01:2021-Broken Access Control</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;name&#x27; (línea 116) alcanza la operación de archivo &#x27;os.remove&#x27; (línea 103).</p><h4>Evidencia (línea 103)</h4><pre class="code">    os.remove(name)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 116 → <strong>name</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-29" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(29)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Path Traversal</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">PATH_TRAVERSAL</span> <a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-22</span></a>
+          <span>📄 samples\vulnerable_sample.py:104 &nbsp;•&nbsp; 🛡️ A01:2021-Broken Access Control</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;name&#x27; (línea 116) alcanza la operación de archivo &#x27;os.unlink&#x27; (línea 104).</p><h4>Evidencia (línea 104)</h4><pre class="code">    os.unlink(name)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 116 → <strong>name</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-30" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(30)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Path Traversal</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">PATH_TRAVERSAL</span> <a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-22</span></a>
+          <span>📄 samples\vulnerable_sample.py:107 &nbsp;•&nbsp; 🛡️ A01:2021-Broken Access Control</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;name&#x27; (línea 116) alcanza la operación de archivo &#x27;shutil.rmtree&#x27; (línea 107).</p><h4>Evidencia (línea 107)</h4><pre class="code">    shutil.rmtree(shutil_path)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 116 → <strong>name</strong></li><li>[2] Línea 19 → <strong>shutil_path</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-31" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(31)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Path Traversal</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">PATH_TRAVERSAL</span> <a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-22</span></a>
+          <span>📄 samples\vulnerable_sample.py:108 &nbsp;•&nbsp; 🛡️ A01:2021-Broken Access Control</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;name&#x27; (línea 116) alcanza la operación de archivo &#x27;shutil.copy&#x27; (línea 108).</p><h4>Evidencia (línea 108)</h4><pre class="code">    shutil.copy(name, &quot;/destino&quot;)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 116 → <strong>name</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-32" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(32)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Cross-Site Scripting (XSS)</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">XSS</span> <a href="https://cwe.mitre.org/data/definitions/79.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-79</span></a>
+          <span>📄 samples\vulnerable_sample.py:118 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;name&#x27; (línea 116) llega a renderizado HTML sin escape via &#x27;render_template_string&#x27; (línea 118).</p><h4>Evidencia (línea 118)</h4><pre class="code">    return render_template_string(template)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 116 → <strong>name</strong></li><li>[2] Línea 19 → <strong>template</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Escapa siempre la salida antes de renderizarla en HTML. Usa plantillas auto-escapantes (Jinja2 por defecto lo hace salvo | safe). Evita render_template_string con datos dinámicos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-33" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(33)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Cross-Site Scripting (XSS)</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">XSS</span> <a href="https://cwe.mitre.org/data/definitions/79.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-79</span></a>
+          <span>📄 samples\vulnerable_sample.py:124 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">80%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:80%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>El valor tainted de &#x27;msg&#x27; (línea 123) llega a renderizado HTML sin escape via &#x27;Response&#x27; (línea 124).</p><h4>Evidencia (línea 124)</h4><pre class="code">    return Response(msg)</pre><h4>🔀 Flujo de Datos (Taint)</h4><ul class="dataflow-list"><li>[1] Línea 123 → <strong>msg</strong></li></ul><h4>Recomendación</h4><div class="recommendation-box">Escapa siempre la salida antes de renderizarla en HTML. Usa plantillas auto-escapantes (Jinja2 por defecto lo hace salvo | safe). Evita render_template_string con datos dinámicos.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-34" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(34)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Hash Débil: MD5</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">WEAK_HASH_MD5</span> <a href="https://cwe.mitre.org/data/definitions/327.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-327</span></a>
+          <span>📄 samples\vulnerable_sample.py:131 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>MD5 es roto criptográficamente. No lo uses para integridad ni seguridad. Usa SHA-256 o superior.</p><h4>Evidencia (línea 131)</h4><pre class="code">    return hashlib.md5(password.encode()).hexdigest()</pre><h4>Recomendación</h4><div class="recommendation-box">Usa SHA-256, SHA-512 o SHA-3 para integridad. Para contraseñas usa bcrypt, scrypt o Argon2 con sal.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-35" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(35)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Hash Débil: MD4</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">WEAK_HASH_MD4</span> <a href="https://cwe.mitre.org/data/definitions/327.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-327</span></a>
+          <span>📄 samples\vulnerable_sample.py:139 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>MD4 está completamente roto.</p><h4>Evidencia (línea 139)</h4><pre class="code">    hashlib.new(&quot;md4&quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa SHA-256, SHA-512 o SHA-3 para integridad. Para contraseñas usa bcrypt, scrypt o Argon2 con sal.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-36" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(36)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Cifrado Débil: DES</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">WEAK_CIPHER_DES</span> <a href="https://cwe.mitre.org/data/definitions/326.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-326</span></a>
+          <span>📄 samples\vulnerable_sample.py:145 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>DES tiene clave de 56 bits y es trivial de romper por fuerza bruta.</p><h4>Evidencia (línea 145)</h4><pre class="code">    cipher1 = DES.new(key, DES.MODE_ECB)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa AES-256-GCM o ChaCha20-Poly1305 con autenticación AEAD.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-37" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(37)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Cifrado Débil: RC4</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">WEAK_CIPHER_RC4</span> <a href="https://cwe.mitre.org/data/definitions/327.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-327</span></a>
+          <span>📄 samples\vulnerable_sample.py:146 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">90%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:90%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>RC4 tiene múltiples sesgos y ataques. Usa AES-GCM o ChaCha20-Poly1305.</p><h4>Evidencia (línea 146)</h4><pre class="code">    cipher2 = ARC4.new(key)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa AES-256-GCM o ChaCha20-Poly1305 con autenticación AEAD.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-38" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(38)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Cifrado Débil: DES</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">WEAK_CIPHER_DES</span> <a href="https://cwe.mitre.org/data/definitions/326.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-326</span></a>
+          <span>📄 samples\vulnerable_sample.py:147 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>DES tiene clave de 56 bits y es trivial de romper por fuerza bruta.</p><h4>Evidencia (línea 147)</h4><pre class="code">    cipher3 = DES3.new(b&quot;1234567812345678&quot;, DES3.MODE_ECB)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa AES-256-GCM o ChaCha20-Poly1305 con autenticación AEAD.</div></div>
+  </div>
+
+  <div class="finding" data-severity="high" id="finding-39" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(39)">
+    <div class="finding-header">
+      <div class="finding-sev high">🟠</div>
+      <div class="finding-main">
+        <div class="finding-title">Tamaño de Clave RSA Insuficiente</div>
+        <div class="finding-meta">
+          <span class="badge sev-high">HIGH</span> <span class="badge rule">SMALL_RSA_KEY</span> <a href="https://cwe.mitre.org/data/definitions/326.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-326</span></a>
+          <span>📄 samples\vulnerable_sample.py:164 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">95%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:95%;background:#ef4444;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>RSA con 1024 bits es considerado débil. El mínimo recomendado hoy es 2048 bits, preferible 3072 o 4096.</p><h4>Evidencia (línea 164)</h4><pre class="code">    rsa_key_size = 1024</pre><h4>Recomendación</h4><div class="recommendation-box">Usa RSA &gt;= 2048 bits, o mejor curvas elípticas (P-256, Ed25519).</div></div>
+  </div>
+
+  <div class="finding" data-severity="medium" id="finding-40" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(40)">
+    <div class="finding-header">
+      <div class="finding-sev medium">🟡</div>
+      <div class="finding-main">
+        <div class="finding-title">Hash Débil: SHA1</div>
+        <div class="finding-meta">
+          <span class="badge sev-medium">MEDIUM</span> <span class="badge rule">WEAK_HASH_SHA1</span> <a href="https://cwe.mitre.org/data/definitions/327.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-327</span></a>
+          <span>📄 samples\vulnerable_sample.py:135 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>SHA-1 tiene colisiones prácticas conocidas. Usa SHA-256 o SHA-512.</p><h4>Evidencia (línea 135)</h4><pre class="code">    return hashlib.sha1(password.encode()).hexdigest()</pre><h4>Recomendación</h4><div class="recommendation-box">Usa SHA-256, SHA-512 o SHA-3 para integridad. Para contraseñas usa bcrypt, scrypt o Argon2 con sal.</div></div>
+  </div>
+
+  <div class="finding" data-severity="medium" id="finding-41" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(41)">
+    <div class="finding-header">
+      <div class="finding-sev medium">🟡</div>
+      <div class="finding-main">
+        <div class="finding-title">Hash Débil: SHA1</div>
+        <div class="finding-meta">
+          <span class="badge sev-medium">MEDIUM</span> <span class="badge rule">WEAK_HASH_SHA1</span> <a href="https://cwe.mitre.org/data/definitions/327.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-327</span></a>
+          <span>📄 samples\vulnerable_sample.py:140 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>SHA-1 tiene colisiones prácticas conocidas. Usa SHA-256 o SHA-512.</p><h4>Evidencia (línea 140)</h4><pre class="code">    hashlib.new(&quot;sha1&quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa SHA-256, SHA-512 o SHA-3 para integridad. Para contraseñas usa bcrypt, scrypt o Argon2 con sal.</div></div>
+  </div>
+
+  <div class="finding" data-severity="medium" id="finding-42" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(42)">
+    <div class="finding-header">
+      <div class="finding-sev medium">🟡</div>
+      <div class="finding-main">
+        <div class="finding-title">Números Aleatorios Inseguros</div>
+        <div class="finding-meta">
+          <span class="badge sev-medium">MEDIUM</span> <span class="badge rule">INSECURE_RANDOM</span> <a href="https://cwe.mitre.org/data/definitions/338.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-338</span></a>
+          <span>📄 samples\vulnerable_sample.py:152 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>random.MÉTODO() usa un PRNG no criptográficamente seguro. No es adecuado para tokens, contraseñas, claves, nonces criptográficos ni sorteos.</p><h4>Evidencia (línea 152)</h4><pre class="code">    token = random.randint(0, 1000000)</pre><h4>Recomendación</h4><div class="recommendation-box">Usa secrets (Python 3.6+) o os.urandom() para seguridad criptográfica. En contextos de Flask/Django usa sus helpers.</div></div>
+  </div>
+
+  <div class="finding" data-severity="medium" id="finding-43" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(43)">
+    <div class="finding-header">
+      <div class="finding-sev medium">🟡</div>
+      <div class="finding-main">
+        <div class="finding-title">Números Aleatorios Inseguros</div>
+        <div class="finding-meta">
+          <span class="badge sev-medium">MEDIUM</span> <span class="badge rule">INSECURE_RANDOM</span> <a href="https://cwe.mitre.org/data/definitions/338.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-338</span></a>
+          <span>📄 samples\vulnerable_sample.py:153 &nbsp;•&nbsp; 🛡️ A02:2021-Cryptographic Failures</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">85%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>random.MÉTODO() usa un PRNG no criptográficamente seguro. No es adecuado para tokens, contraseñas, claves, nonces criptográficos ni sorteos.</p><h4>Evidencia (línea 153)</h4><pre class="code">    choice = random.choice([&quot;a&quot;, &quot;b&quot;, &quot;c&quot;])</pre><h4>Recomendación</h4><div class="recommendation-box">Usa secrets (Python 3.6+) o os.urandom() para seguridad criptográfica. En contextos de Flask/Django usa sus helpers.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-44" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(44)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:38 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 38)</h4><pre class="code">    username = input(&quot;Usuario: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-45" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(45)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:39 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 39)</h4><pre class="code">    password = input(&quot;Contraseña: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-46" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(46)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:52 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 52)</h4><pre class="code">    safe_param = input(&quot;valor: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-47" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(47)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:63 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 63)</h4><pre class="code">    host = input(&quot;Host: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-48" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(48)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:68 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 68)</h4><pre class="code">    user_cmd = input(&quot;Comando: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-49" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(49)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:76 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 76)</h4><pre class="code">    data = input(&quot;Código: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+  <div class="finding" data-severity="info" id="finding-50" onclick="event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON' && toggleFinding(50)">
+    <div class="finding-header">
+      <div class="finding-sev info">🔵</div>
+      <div class="finding-main">
+        <div class="finding-title">Función Peligrosa: input()</div>
+        <div class="finding-meta">
+          <span class="badge sev-info">INFO</span> <span class="badge rule">DANGEROUS_FUNCTION</span> <a href="https://cwe.mitre.org/data/definitions/20.html" target="_blank" style="text-decoration:none"><span class="badge">CWE-20</span></a>
+          <span>📄 samples\vulnerable_sample.py:102 &nbsp;•&nbsp; 🛡️ A03:2021-Injection</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;">50%</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:50%;background:#3b82f6;"></div></div>
+        <span class="toggle">▶</span>
+      </div>
+    </div>
+    <div class="finding-body"><h4>Descripción</h4><p>input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla.</p><h4>Evidencia (línea 102)</h4><pre class="code">    name = input(&quot;Archivo a borrar: &quot;)</pre><h4>Recomendación</h4><div class="recommendation-box">Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras.</div></div>
+  </div>
+
+    
+  </div>
+
+  <div class="footer">
+    Generado por SAST Analyzer v0.1.0 • 2026-09-09 23:51:33 UTC
+  </div>
+</div>
+
+<script>
+function toggleFinding(id) {
+  const el = document.getElementById('finding-' + id);
+  if (el) el.classList.toggle('open');
+}
+function filterFindings(severity) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.finding').forEach(el => {
+    if (severity === 'all' || el.dataset.severity === severity) {
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+</script>
+</body>
+</html>

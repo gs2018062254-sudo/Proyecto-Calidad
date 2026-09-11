@@ -1,0 +1,19 @@
+[project]
+name = "sast-analyzer"
+version = "0.1.0"
+description = "Analizador estático de vulnerabilidades de código (SAST)"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1.0",
+    "jinja2>=3.1.0",
+]
+
+[project.scripts]
+sast = "sast.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["sast*"]

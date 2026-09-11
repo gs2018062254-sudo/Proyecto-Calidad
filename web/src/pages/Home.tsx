@@ -315,7 +315,7 @@ export default function Home() {
                   Editor de código
                 </div>
                 <div className="text-[12px] text-surface-500">
-                  Pega tu fuente o sube un archivo .py / .zip y obtén resultados en segundos.
+                  Pega tu fuente o sube un archivo .py y obtén resultados en segundos.
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export default function Home() {
                 </select>
                 <label className="btn-secondary cursor-pointer">
                   <UploadCloud size={14} /> Subir archivo
-                  <input type="file" className="hidden" accept=".py,.zip" multiple />
+                  <input type="file" className="hidden" accept=".py,.pyw" multiple />
                 </label>
               </div>
             </div>
@@ -353,7 +353,7 @@ export default function Home() {
                     : "text-surface-500 hover:text-surface-800"
                 }`}
               >
-                <FolderClosed size={15} /> Subir archivos / .zip
+                <FolderClosed size={15} /> Subir archivo
               </button>
             </div>
 

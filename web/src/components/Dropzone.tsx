@@ -26,10 +26,10 @@ export default function Dropzone() {
       <div
         className={clsx(
           "relative cursor-pointer select-none rounded-2xl border-2 border-dashed transition-all",
-          "p-8 md:p-10 text-center overflow-hidden",
+          "p-8 md:p-10 text-center overflow-hidden bg-white",
           dragging
-            ? "dropzone-active"
-            : "border-white/10 bg-[rgba(255,255,255,0.02)] hover:border-white/20",
+            ? "border-primary-500 bg-primary-50/60 shadow-card"
+            : "border-surface-200 hover:border-primary-300 hover:bg-surface-50",
         )}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -55,36 +55,35 @@ export default function Dropzone() {
           type="file"
           className="hidden"
           multiple
-          accept=".py,.pyw,.zip"
+          accept=".py,.pyw"
           onChange={(e) => onFiles(e.target.files)}
         />
 
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-[rgba(0,255,179,0.12)] grid place-items-center text-neon-emerald mb-4 shadow-neon-sm">
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 mb-4 shadow-soft">
           <CloudUpload size={30} strokeWidth={1.8} />
         </div>
-        <div className="font-display font-semibold text-white text-lg">
-          Arrastra tus archivos aquí
+        <div className="font-display font-semibold text-surface-900 text-lg">
+          Arrastra tu archivo aquí
         </div>
-        <div className="text-sm text-slate-400 mt-1.5">
+        <div className="text-sm text-surface-500 mt-1.5">
           o haz clic para{" "}
-          <span className="text-neon-emerald font-medium">seleccionar archivos</span>
+          <span className="text-primary-700 font-semibold">seleccionar archivo</span>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="chip">.py</span>
-          <span className="chip">.pyw</span>
-          <span className="chip">.zip (proyecto)</span>
-          <span className="chip">≤ 5 MB</span>
+          <span className="chip chip-blue">.py</span>
+          <span className="chip chip-purple">.pyw</span>
+          <span className="chip chip-gray">≤ 5 MB</span>
         </div>
       </div>
 
       {files.length > 0 && (
-        <div className="glass-surface rounded-2xl p-4 space-y-2">
+        <div className="card p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-slate-200">
+            <div className="text-[13px] font-semibold text-surface-700">
               Archivos ({files.length})
             </div>
             <button
-              className="text-xs text-slate-400 hover:text-neon-pink transition-colors"
+              className="text-[12px] text-surface-500 hover:text-danger-600 transition-colors font-semibold"
               onClick={clearFiles}
             >
               Limpiar
@@ -94,22 +93,22 @@ export default function Dropzone() {
             {files.map((f, i) => (
               <div
                 key={i}
-                className="group flex items-center gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2 hover:border-white/10 transition"
+                className="group flex items-center gap-3 rounded-xl border border-surface-200 bg-white px-3 py-2 hover:border-primary-200 hover:bg-primary-50/40 transition"
               >
                 <FileCode
                   size={16}
-                  className="shrink-0 text-neon-cyan"
+                  className="shrink-0 text-primary-600"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-slate-200 font-medium">
+                  <div className="truncate text-[13px] text-surface-800 font-semibold">
                     {f.name}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-surface-500">
                     {formatBytes(f.size)}
                   </div>
                 </div>
                 <button
-                  className="text-slate-500 hover:text-neon-pink transition opacity-0 group-hover:opacity-100"
+                  className="text-surface-400 hover:text-danger-600 transition opacity-0 group-hover:opacity-100"
                   onClick={() => removeFile(f.name)}
                 >
                   <X size={14} />

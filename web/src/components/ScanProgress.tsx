@@ -5,10 +5,10 @@ import { Loader2, AlertTriangle, Clock, CalendarClock } from "lucide-react";
 import { formatDateTime, formatTime, nowISO } from "../lib/datetime";
 
 const STAGES = [
-  { label: "Iniciando motor", detail: "Preparando analizador Python" },
-  { label: "Parseando AST", detail: "Construyendo árbol sintáctico" },
-  { label: "Taint analysis", detail: "Rastreando flujo source → sink" },
-  { label: "Generando reporte", detail: "Clasificando y ordenando hallazgos" },
+  { label: "Iniciando motor", detail: "Preparando analizador de seguridad Python" },
+  { label: "Parseando AST", detail: "Construyendo árbol sintáctico abstracto" },
+  { label: "Taint analysis", detail: "Rastreando flujo de fuentes a sumideros" },
+  { label: "Generando reporte", detail: "Clasificando y ordenando hallazgos CWE" },
 ];
 
 export default function ScanProgress() {
@@ -43,58 +43,59 @@ export default function ScanProgress() {
   const elapsedS = elapsedSec % 60;
 
   return (
-    <div id="results" className="scroll-mt-24 animate-fade-up">
-      <div className="card p-7 relative overflow-hidden bg-gradient-to-br from-white via-white to-primary-50/40">
+    <div id="results" className="scroll-mt-24">
+      <div className="p-5 rounded-[var(--radius-lg)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
         {status === "error" ? (
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-danger-50 text-danger-600 grid place-items-center border border-danger-200 shrink-0">
-              <AlertTriangle size={20} />
+          <div className="flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-rose-950/40 text-rose-400 grid place-items-center border border-rose-800/60 shrink-0">
+              <AlertTriangle size={18} />
             </div>
             <div className="flex-1">
-              <div className="font-display font-bold text-[17px] text-surface-900 leading-tight">
-                Error durante el análisis
+              <div className="font-display font-bold text-base text-white leading-tight">
+                Fallo durante el análisis
               </div>
-              <div className="text-[14px] text-surface-500 mt-1 break-words">
-                {error ?? "Error desconocido"}
+              <div className="text-xs text-rose-300 mt-1 break-words font-mono">
+                {error ?? "Error desconocido en el motor de análisis."}
               </div>
-              <div className="mt-3 flex items-center gap-2 flex-wrap">
-                <span className="chip chip-gray inline-flex items-center gap-1.5">
+              <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                <span className="studio-badge">
                   <CalendarClock size={11} />
                   {formatDateTime(startedDisplay, { seconds: true })}
                 </span>
-                <span className="chip chip-red inline-flex items-center gap-1.5">
+                <span className="studio-badge studio-sev-critical">
                   <Clock size={11} />
-                  Error a las {formatTime(startedDisplay)}
+                  Fallo a las {formatTime(startedDisplay)}
                 </span>
               </div>
             </div>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-5 flex-wrap">
-              <div className="w-12 h-12 rounded-2xl bg-primary-50 border border-primary-100 text-primary-700 grid place-items-center shadow-soft shrink-0">
-                <Loader2 size={22} className="animate-spin" />
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] text-blue-400 grid place-items-center shrink-0">
+                <Loader2 size={18} className="animate-spin" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-display font-bold text-[17px] text-surface-900 leading-tight">
-                  Escaneando tu código…
+                <div className="font-display font-bold text-base text-white leading-tight">
+                  Ejecutando análisis sintáctico…
                 </div>
-                <div className="text-[13px] text-surface-500 mt-0.5">
-                  Por favor espera mientras detectamos vulnerabilidades.
+                <div className="text-xs text-[var(--studio-text-secondary)] mt-0.5">
+                  Extrayendo nodos AST y analizando propagación de variables.
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="chip chip-blue inline-flex items-center gap-1.5">
+                <span className="studio-badge text-blue-400">
                   <CalendarClock size={11} /> Inicio {formatTime(startedDisplay)}
                 </span>
-                <span className="chip chip-gray inline-flex items-center gap-1.5">
+                <span className="studio-badge">
                   <Clock size={11} />{" "}
                   {elapsedMin > 0 ? `${elapsedMin}m ` : ""}
                   {elapsedS}s transcurridos
                 </span>
               </div>
             </div>
-            <ol className="space-y-3">
+
+            <ol className="space-y-2">
               {STAGES.map((s, i) => {
                 const active = i <= stage;
                 const done = i < stage;
@@ -102,37 +103,36 @@ export default function ScanProgress() {
                   <li
                     key={i}
                     className={clsx(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all border",
-                      active
-                        ? "bg-white border-surface-200 shadow-soft"
-                        : "bg-surface-50/60 border-transparent opacity-70",
+                      "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 transition-all border",
+                      done
+                        ? "bg-[var(--studio-surface)] border-[var(--studio-border)] text-white"
+                        : active
+                        ? "bg-[var(--studio-surface-active)] border-blue-500/50 text-white"
+                        : "bg-transparent border-[var(--studio-border)]/40 text-[var(--studio-text-faint)]",
                     )}
                   >
                     <div
                       className={clsx(
-                        "w-7 h-7 rounded-lg grid place-items-center text-xs font-bold shrink-0",
+                        "w-5 h-5 rounded-[2px] grid place-items-center text-[10px] font-mono font-bold shrink-0",
                         done
-                          ? "bg-success-500 text-white shadow-soft"
+                          ? "bg-emerald-950 text-emerald-400 border border-emerald-800/60"
                           : active
-                          ? "bg-primary-100 text-primary-700 ring-2 ring-primary-200"
-                          : "bg-surface-100 text-surface-400",
+                          ? "bg-blue-600 text-white animate-pulse"
+                          : "bg-[var(--studio-panel)] text-[var(--studio-text-faint)] border border-[var(--studio-border)]",
                       )}
                     >
                       {done ? "✓" : i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[14px] font-semibold text-surface-800">
+                      <div className="text-xs font-medium">
                         {s.label}
                       </div>
-                      <div className="text-[12px] text-surface-500">{s.detail}</div>
+                      <div className="text-[11px] text-[var(--studio-text-secondary)] font-mono">{s.detail}</div>
                     </div>
                     {active && !done && (
-                      <div className="h-1.5 w-24 rounded-full bg-surface-100 overflow-hidden shrink-0">
+                      <div className="h-1 w-20 rounded-full bg-slate-900 overflow-hidden shrink-0">
                         <div
-                          className="h-full w-1/2 rounded-full animate-pulse"
-                          style={{
-                            background: "linear-gradient(90deg, #3b82f6, #2563eb)",
-                          }}
+                          className="h-full w-2/3 rounded-full bg-blue-500 animate-pulse"
                         />
                       </div>
                     )}

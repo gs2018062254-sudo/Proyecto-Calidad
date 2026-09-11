@@ -10,6 +10,7 @@ import {
   Terminal,
   Activity,
   UserCheck,
+  Info,
 } from "lucide-react";
 
 const NAV = [
@@ -19,6 +20,7 @@ const NAV = [
   { to: "/reports", label: "Reportes SARIF", icon: FileBarChart },
   { to: "/history", label: "Registro de auditorías", icon: History },
   { to: "/settings", label: "Configuración", icon: Settings },
+  { to: "/about", label: "Especificación técnica", icon: Info },
 ];
 
 export default function Sidebar() {

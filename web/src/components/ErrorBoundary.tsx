@@ -67,64 +67,67 @@ export default class ErrorBoundary extends Component<Props, State> {
     const e = this.state.error;
 
     return (
-      <div className="min-h-screen bg-surface-50 flex items-center justify-center p-5 font-display">
-        <div className="w-full max-w-xl card p-7 space-y-5 shadow-card">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-danger-50 border border-danger-100 grid place-items-center text-danger-600 shrink-0 animate-float">
-              <AlertTriangle size={28} strokeWidth={2} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-[22px] font-black text-surface-900 leading-tight">
-                Algo salió mal
+      <div className="min-h-screen bg-[var(--studio-bg)] text-[var(--studio-text)] flex items-center justify-center p-5 font-display">
+        <div className="w-full max-w-xl studio-panel shadow-2xl border border-[var(--studio-border)]">
+          <div className="studio-panel-header !bg-rose-950/20 border-b border-rose-900/30">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <AlertTriangle size={18} />
+              <h1 className="font-display font-bold text-sm tracking-wide text-rose-300">
+                Fallo de Renderizado / Excepción en UI
               </h1>
-              <p className="text-[13px] text-surface-500 mt-1.5 leading-relaxed">
-                Detectamos un error al renderizar la aplicación. Esto suele ocurrir por
-                estado persistido corrupto o un problema con el código pegado.
-              </p>
             </div>
+            <span className="text-[10px] font-mono text-rose-400/80 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
+              FATAL ERROR
+            </span>
           </div>
 
-          {e && (
-            <div className="rounded-xl border border-danger-200 bg-danger-50/60 p-4 space-y-1.5">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-danger-700">
-                Detalle del error
+          <div className="p-6 space-y-5">
+            <p className="text-xs text-[var(--studio-text-secondary)] leading-relaxed">
+              Se produjo una excepción no controlada en el árbol de componentes de React. Esto ocurre habitualmente cuando existen datos residuales corruptos en almacenamiento local o sintaxis anómala en el buffer.
+            </p>
+
+            {e && (
+              <div className="rounded-[var(--radius-sm)] border border-rose-900/50 bg-[var(--studio-surface)] p-3.5 space-y-2">
+                <div className="text-[11px] font-mono font-bold text-rose-400 uppercase tracking-wider">
+                  Detalle del error
+                </div>
+                <div className="text-[12px] text-rose-300 font-mono break-words whitespace-pre-wrap leading-relaxed max-h-44 overflow-auto scrollbar-thin pr-1">
+                  {String(e.name && e.message ? `${e.name}: ${e.message}` : e)}
+                  {e.stack ? `\n\n${e.stack.split("\n").slice(1, 5).join("\n")}` : ""}
+                </div>
               </div>
-              <div className="text-[13px] text-danger-800 font-mono break-words whitespace-pre-wrap leading-relaxed max-h-48 overflow-auto scrollbar-thin pr-1">
-                {String(e.name && e.message ? `${e.name}: ${e.message}` : e)}
-                {e.stack ? `\n\n${e.stack.split("\n").slice(1, 5).join("\n")}` : ""}
-              </div>
+            )}
+
+            <div className="grid sm:grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={this.handleReset}
+                className="studio-btn-primary justify-center text-xs py-2.5"
+              >
+                <RefreshCw size={14} /> Recargar consola
+              </button>
+              <button
+                onClick={this.handleClearAll}
+                className="studio-btn-secondary justify-center text-xs py-2.5 text-rose-400 hover:text-rose-300"
+              >
+                <Trash2 size={14} /> Limpiar caché y reiniciar
+              </button>
             </div>
-          )}
 
-          <div className="grid sm:grid-cols-2 gap-2.5 pt-1">
-            <button
-              onClick={this.handleReset}
-              className="btn-primary justify-center text-[13px] py-2.5"
-            >
-              <RefreshCw size={14} /> Recargar página
-            </button>
-            <button
-              onClick={this.handleClearAll}
-              className="px-4 py-2.5 rounded-xl text-[13px] font-bold bg-white border border-surface-200 text-surface-800 hover:bg-surface-50 shadow-soft transition active:scale-95 inline-flex items-center justify-center gap-2"
-            >
-              <Trash2 size={14} /> Limpiar estado
-            </button>
-          </div>
-
-          <a
-            href="/"
-            onClick={(ev) => {
-              ev.preventDefault();
-              this.handleReset();
-            }}
-            className="inline-flex items-center gap-1.5 text-[13px] text-primary-700 hover:text-primary-800 font-semibold"
-          >
-            <Home size={13} /> Volver al inicio
-          </a>
-
-          <div className="text-[11px] text-surface-400 border-t border-surface-100 pt-4 leading-relaxed">
-            💡 Consejo: si el error persiste al pegar código, prueba con el botón{" "}
-            <b>"Cargar ejemplo demo"</b> incluido en el editor.
+            <div className="pt-3 border-t border-[var(--studio-border)] flex items-center justify-between text-xs font-mono">
+              <a
+                href="/"
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  this.handleReset();
+                }}
+                className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300"
+              >
+                <Home size={13} /> Volver a la consola
+              </a>
+              <span className="text-[10px] text-[var(--studio-text-faint)]">
+                SAST Studio v0.1.0
+              </span>
+            </div>
           </div>
         </div>
       </div>

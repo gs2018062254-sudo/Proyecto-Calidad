@@ -95,6 +95,14 @@ const FALLBACK_RULES: RuleDto[] = [
   },
 ];
 
+const SEV_CLASS: Record<string, string> = {
+  critical: "studio-sev-critical",
+  high: "studio-sev-high",
+  medium: "studio-sev-medium",
+  low: "studio-sev-low",
+  info: "studio-sev-info",
+};
+
 export default function Rules() {
   const [rules, setRules] = useState<RuleDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,104 +124,101 @@ export default function Rules() {
   const display = rules.length ? rules : FALLBACK_RULES;
 
   return (
-    <div className="max-w-[1280px] mx-auto py-4 space-y-8">
-      <div className="text-center max-w-2xl mx-auto space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-blue-950/60 border border-blue-800/60 px-3.5 py-1 text-xs text-blue-400 font-mono">
-          <BookOpen size={14} className="text-blue-400" />
-          <span>CATÁLOGO DE REGLAS DE DETECCIÓN</span>
+    <div className="max-w-[1300px] mx-auto space-y-6">
+      {/* Header */}
+      <section className="studio-console-header">
+        <div className="studio-title-group">
+          <h1>Catálogo de Reglas de Seguridad (SAST)</h1>
+          <p>
+            {display.length} reglas activas cubriendo mitigación de vulnerabilidades OWASP Top 10,
+            debilidades CWE y análisis de propagación de flujo de datos en Python.
+          </p>
         </div>
-        <h1 className="font-display font-extrabold text-3xl md:text-4xl tracking-tight text-white">
-          Reglas de Seguridad Estática (SAST)
-        </h1>
-        <p className="text-sm text-slate-400 leading-relaxed">
-          {display.length} reglas activas cubriendo OWASP Top 10, mitigación de vulnerabilidades CWE y
-          análisis de flujo de datos en Python.
-        </p>
-      </div>
+        <div className="flex items-center gap-2">
+          <span className="studio-badge text-blue-400">
+            <BookOpen size={13} /> {display.length} reglas registradas
+          </span>
+        </div>
+      </section>
 
+      {/* Rules Grid */}
       {loading && !rules.length ? (
         <div className="grid md:grid-cols-2 gap-4">
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
-              className="card bg-[#0a0f1d] border border-slate-800 p-5 h-48 animate-pulse"
+              className="p-5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] h-44 animate-pulse"
             />
           ))}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {display.map((r) => {
-            const sevKey =
-              (r.severity?.toLowerCase() as keyof typeof SEVERITY_INFO) ||
-              "info";
-            const sev =
-              SEVERITY_INFO[sevKey] || SEVERITY_INFO.info;
+            const sevKey = (r.severity?.toLowerCase() || "info") as keyof typeof SEVERITY_INFO;
+            const sev = SEVERITY_INFO[sevKey] || SEVERITY_INFO.info;
+            const owaspTag = r.owasp ? r.owasp.split("-")[0] : null;
+
             return (
               <div
                 key={r.id}
-                className="card bg-[#0a0f1d] border border-slate-800/90 p-5 relative overflow-hidden transition-all hover:border-slate-700"
+                className="p-4 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] relative overflow-hidden transition-colors hover:border-[var(--studio-border-bright)] flex flex-col justify-between"
                 style={{
-                  borderLeftWidth: 4,
+                  borderLeftWidth: 3,
                   borderLeftColor: sev.color,
                 }}
               >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className="chip !py-0.5 text-[11px]"
-                        style={{
-                          background: `${sev.color}18`,
-                          color: sev.color,
-                          borderColor: `${sev.color}40`,
-                        }}
-                      >
-                        {sev.emoji} {sev.labelEs}
-                      </span>
-                      <span className="font-mono text-[11px] text-slate-500 font-medium">
-                        {r.id}
-                      </span>
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`studio-badge ${SEV_CLASS[sevKey] || "studio-sev-info"} !text-[10px]`}>
+                          {sev.labelEs}
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--studio-text-secondary)]">
+                          {r.id}
+                        </span>
+                      </div>
+                      <h3 className="font-display font-semibold text-sm text-white mt-1.5">
+                        {r.title}
+                      </h3>
                     </div>
-                    <h3 className="font-display font-semibold text-[17px] text-white mt-2">
-                      {r.title}
-                    </h3>
-                  </div>
-                  <div
-                    className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
-                    style={{ background: `${sev.color}15`, color: sev.color }}
-                  >
-                    <ShieldAlert size={18} />
-                  </div>
-                </div>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  {r.description}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-4 font-mono text-xs">
-                  {r.cwe && (
-                    <a
-                      href={`https://cwe.mitre.org/data/definitions/${r.cwe.replace(
-                        "CWE-",
-                        "",
-                      )}.html`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="chip chip-gray hover:text-blue-400 hover:border-blue-500/40"
+                    <div
+                      className="w-7 h-7 rounded-[var(--radius-sm)] grid place-items-center shrink-0"
+                      style={{ background: `${sev.color}15`, color: sev.color }}
                     >
-                      {r.cwe} <ExternalLink size={10} />
-                    </a>
-                  )}
-                  {r.owasp && (
-                    <span className="chip chip-purple !py-0.5">
-                      OWASP {r.owasp.split("-")[0]}
-                    </span>
-                  )}
-                </div>
-                {r.recommendation && (
-                  <div className="mt-4 rounded-xl bg-[#070a12] border border-slate-800 p-3">
-                    <div className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold mb-1">
-                      Recomendación
+                      <ShieldAlert size={15} />
                     </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
+                  </div>
+
+                  <p className="text-xs text-[var(--studio-text-secondary)] leading-relaxed">
+                    {r.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mt-3 font-mono text-[11px]">
+                    {r.cwe && (
+                      <a
+                        href={`https://cwe.mitre.org/data/definitions/${r.cwe.replace("CWE-", "")}.html`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="studio-badge hover:text-blue-400 hover:border-blue-500/40 transition-colors"
+                      >
+                        {r.cwe} <ExternalLink size={9} />
+                      </a>
+                    )}
+                    {owaspTag && (
+                      <span className="studio-badge">
+                        OWASP: {owaspTag}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {r.recommendation && (
+                  <div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] p-2.5">
+                    <div className="text-[11px] text-emerald-400 font-semibold mb-0.5">
+                      Remediación recomendada
+                    </div>
+                    <p className="text-xs text-emerald-300/90 leading-relaxed">
                       💡 {r.recommendation}
                     </p>
                   </div>

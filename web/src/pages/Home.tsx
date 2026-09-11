@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSastStore } from "../store/sast";
 import {
   FileCode,
@@ -356,9 +356,7 @@ export default function Home() {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => {
-                  startTransition(() => loadDemo());
-                }}
+                onClick={() => loadDemo()}
                 className="px-3 py-2 rounded-xl text-[13px] font-bold transition bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 hover:text-primary-800 shadow-soft inline-flex items-center gap-1.5 active:scale-95"
                 title="Rellena el editor con un ejemplo Flask con 11 vulnerabilidades reales para probar el SAST al instante"
               >

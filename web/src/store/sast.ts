@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { startTransition } from "react";
 import type {
   FindingDto,
   HistoryEntry,
@@ -193,12 +192,10 @@ export const useSastStore = create<SastStore>((set, get) => {
           typeof filename === "string" && filename.trim() !== ""
             ? filename.trim()
             : undefined;
-        startTransition(() => {
-          set((s) => ({
-            pasteValue: safeValue,
-            pasteFilename: safeName ?? s.pasteFilename,
-          }));
-        });
+        set((s) => ({
+          pasteValue: safeValue,
+          pasteFilename: safeName ?? s.pasteFilename,
+        }));
       } catch {}
     },
     addNativeFiles: async (list) => {
@@ -334,27 +331,23 @@ export const useSastStore = create<SastStore>((set, get) => {
 
     loadDemo: () => {
       const prepare = () =>
-        startTransition(() =>
-          set({
-            mode: "paste",
-            pasteFilename: "demo.py",
-            status: "idle",
-            result: null,
-            error: undefined,
-            progressStage: 0,
-            expandedFindingId: null,
-            activeSeverityFilter: "all",
-            activeFile: "",
-            nativeFiles: [],
-            files: [],
-          }),
-        );
+        set({
+          mode: "paste",
+          pasteFilename: "demo.py",
+          status: "idle",
+          result: null,
+          error: undefined,
+          progressStage: 0,
+          expandedFindingId: null,
+          activeSeverityFilter: "all",
+          activeFile: "",
+          nativeFiles: [],
+          files: [],
+        });
       const applyContent = () =>
-        startTransition(() =>
-          set({
-            pasteValue: DEMO_SOURCE,
-          }),
-        );
+        set({
+          pasteValue: DEMO_SOURCE,
+        });
       if (typeof window !== "undefined") {
         try {
           window.setTimeout(() => {
@@ -366,7 +359,7 @@ export const useSastStore = create<SastStore>((set, get) => {
             } catch {}
             window.setTimeout(() => {
               applyContent();
-            }, 150);
+            }, 120);
           }, 0);
           return;
         } catch {}

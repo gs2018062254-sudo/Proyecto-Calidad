@@ -68,19 +68,20 @@ class HardcodedSecretRule(BaseRule):
                     findings.append(finding)
                     break
 
-        for node in ast.walk(parsed.tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str):
-                val = node.value.strip()
-                if len(val) >= 32 and self._looks_like_secret(val):
-                    line_num = getattr(node, "lineno", 0)
-                    if line_num and not any(f.line == line_num for f in findings):
-                        finding = self._make_finding(
-                            parsed=parsed,
-                            line=line_num,
-                            column=getattr(node, "col_offset", 0) + 1,
-                            confidence=0.75,
-                        )
-                        findings.append(finding)
+        if parsed.tree is not None:
+            for node in ast.walk(parsed.tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    val = node.value.strip()
+                    if len(val) >= 32 and self._looks_like_secret(val):
+                        line_num = getattr(node, "lineno", 0)
+                        if line_num and not any(f.line == line_num for f in findings):
+                            finding = self._make_finding(
+                                parsed=parsed,
+                                line=line_num,
+                                column=getattr(node, "col_offset", 0) + 1,
+                                confidence=0.75,
+                            )
+                            findings.append(finding)
 
         return findings
 
@@ -132,7 +133,7 @@ class HardcodedSecretRule(BaseRule):
 
 
 class DangerousFunctionRule(BaseRule):
-    """Detecta uso de funciones peligrosas como eval, exec, pickle.loads, etc."""
+    """Detecta uso de funciones peligrosas (eval, exec, etc.) en Python, JS/TS, PHP, Java, etc."""
 
     rule_id = "DANGEROUS_FUNCTION"
     title = "Uso de Función Peligrosa"
@@ -143,8 +144,8 @@ class DangerousFunctionRule(BaseRule):
     recommendation = "Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras."
 
     DANGEROUS_CALLS = {
-        "eval": ("CWE-95", "critical", 0.85, "eval() ejecuta código Python arbitrario. Nunca lo uses con entrada del usuario."),
-        "exec": ("CWE-95", "critical", 0.85, "exec() ejecuta código Python arbitrario. Nunca lo uses con entrada del usuario."),
+        "eval": ("CWE-95", "critical", 0.85, "eval() ejecuta código dinámico arbitrario. Nunca lo uses con entrada del usuario."),
+        "exec": ("CWE-95", "critical", 0.85, "exec() ejecuta comandos o código arbitrario. Nunca lo uses con entrada del usuario."),
         "compile": ("CWE-95", "high", 0.7, "compile() puede ser usado para ejecutar código dinámico."),
         "pickle.loads": ("CWE-502", "critical", 0.9, "pickle.loads() ejecuta código al deserializar. Nunca cargues pickles de fuentes no confiables."),
         "pickle.load": ("CWE-502", "critical", 0.9, "pickle.load() ejecuta código al deserializar. Nunca cargues pickles de fuentes no confiables."),
@@ -156,36 +157,67 @@ class DangerousFunctionRule(BaseRule):
         "input": ("CWE-20", "info", 0.5, "input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla."),
     }
 
+    # Patrones para lenguajes como JavaScript, TypeScript, PHP, Java, etc.
+    MULTI_LANG_PATTERNS = [
+        (re.compile(r"\b(?:eval|new\s+Function)\s*\("), "CWE-95", "critical", 0.88, "Uso de eval() o new Function(): ejecución dinámica de código que puede derivar en Remote Code Execution."),
+        (re.compile(r"\b(?:child_process\.(?:exec|execSync)|shelljs\.exec)\s*\("), "CWE-78", "critical", 0.92, "Ejecución de procesos shell en Node.js/JavaScript: susceptible a Command Injection."),
+        (re.compile(r"\b(?:shell_exec|passthru|system|proc_open|popen)\s*\("), "CWE-78", "critical", 0.9, "Llamada directa al sistema operativo: alto riesgo de Inyección de Comandos."),
+        (re.compile(r"\bRuntime\.getRuntime\(\)\.exec\s*\("), "CWE-78", "critical", 0.92, "Ejecución de procesos del sistema en Java sin aislamiento."),
+    ]
+
     def check(self, parsed: ParsedFile) -> List[Finding]:
         findings: List[Finding] = []
-        from ..core.parser import PythonParser
+        from ..models.finding import Severity
 
-        parser = PythonParser()
+        # 1. Chequeo AST para archivos Python
+        if parsed.tree is not None:
+            for func_name, call_node, line in parsed.function_calls:
+                matched = None
+                if func_name in self.DANGEROUS_CALLS:
+                    matched = self.DANGEROUS_CALLS[func_name]
+                else:
+                    for key, val in self.DANGEROUS_CALLS.items():
+                        if func_name.endswith("." + key):
+                            matched = val
+                            break
 
-        for func_name, call_node, line in parsed.function_calls:
-            matched = None
-            if func_name in self.DANGEROUS_CALLS:
-                matched = self.DANGEROUS_CALLS[func_name]
-            else:
-                for key, val in self.DANGEROUS_CALLS.items():
-                    if func_name.endswith("." + key):
-                        matched = val
-                        break
+                if matched:
+                    cwe, severity, confidence, specific_desc = matched
+                    finding = self._make_finding(
+                        parsed=parsed,
+                        line=line,
+                        column=getattr(call_node, "col_offset", 0) + 1,
+                        confidence=confidence,
+                    )
+                    finding.title = f"Función Peligrosa: {func_name}()"
+                    finding.description = specific_desc
+                    finding.severity = Severity.from_str(severity)
+                    finding.cwe = cwe
+                    findings.append(finding)
 
-            if matched:
-                cwe, severity, confidence, specific_desc = matched
-                finding = self._make_finding(
-                    parsed=parsed,
-                    line=line,
-                    column=getattr(call_node, "col_offset", 0) + 1,
-                    confidence=confidence,
-                )
-                finding.title = f"Función Peligrosa: {func_name}()"
-                finding.description = specific_desc
-                finding.severity = Finding.__annotations__
-                from ..models.finding import Severity
-                finding.severity = Severity.from_str(severity)
-                finding.cwe = cwe
-                findings.append(finding)
+        # 2. Chequeo multi-lenguaje para JS/TS, PHP, Java, Go, etc. (o Python sin AST)
+        existing_lines = {f.line for f in findings}
+        for line_num, line_text in enumerate(parsed.lines, start=1):
+            if line_num in existing_lines:
+                continue
+            trimmed = line_text.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+
+            for pat, cwe, severity, conf, desc in self.MULTI_LANG_PATTERNS:
+                m = pat.search(line_text)
+                if m:
+                    finding = self._make_finding(
+                        parsed=parsed,
+                        line=line_num,
+                        column=m.start() + 1,
+                        confidence=conf,
+                    )
+                    finding.title = f"Función Peligrosa: {m.group(0).strip('(').strip()}"
+                    finding.description = desc
+                    finding.severity = Severity.from_str(severity)
+                    finding.cwe = cwe
+                    findings.append(finding)
+                    break
 
         return findings

@@ -146,6 +146,8 @@ class TaintAnalyzer:
 
     def analyze_file(self, parsed: ParsedFile) -> Dict[str, List[TaintFlow]]:
         """Analiza un archivo buscando flujos tainted hacia diferentes sinks."""
+        if parsed.tree is None:
+            return defaultdict(list)
         taint_map = self._build_taint_map(parsed)
         results: Dict[str, List[TaintFlow]] = defaultdict(list)
 

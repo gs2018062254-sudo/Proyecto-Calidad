@@ -4,15 +4,17 @@
 from __future__ import annotations
 
 import io
+import re
 from typing import Any, Dict, List, Optional
 import requests
 
 GITHUB_API_BASE = "https://api.github.com"
 MAX_REPO_ZIP_SIZE = 25 * 1024 * 1024  # 25 MB max para escaneo remoto
+IDENTIFIER_REGEX = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 
 class GitHubService:
-    """Maneja la autenticación, consulta de repositorios y descarga de código de GitHub."""
+    """Maneja la consulta segura y descarga de repositorios públicos de GitHub."""
 
     @classmethod
     def _headers(cls, token: Optional[str] = None) -> Dict[str, str]:
@@ -24,6 +26,13 @@ class GitHubService:
         if token and token.strip():
             headers["Authorization"] = f"Bearer {token.strip()}"
         return headers
+
+    @classmethod
+    def validate_identifier(cls, val: str, name: str = "identificador") -> str:
+        clean = (val or "").strip()
+        if not clean or not IDENTIFIER_REGEX.match(clean):
+            raise ValueError(f"El valor para '{name}' contiene caracteres no permitidos: '{val}'.")
+        return clean
 
     @classmethod
     def verify_and_get_user(cls, token: str) -> Dict[str, Any]:
@@ -149,6 +158,9 @@ class GitHubService:
         Descarga el archivo zipball del repositorio desde GitHub.
         Sigue redirecciones y valida que no exceda el límite de tamaño seguro.
         """
+        owner = cls.validate_identifier(owner, "propietario")
+        repo = cls.validate_identifier(repo, "repositorio")
+
         ref_part = f"/{ref.strip()}" if ref and ref.strip() else ""
         url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball{ref_part}"
 

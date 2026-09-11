@@ -12,7 +12,8 @@ class ParsedFile:
     file_path: str
     source: str
     lines: List[str]
-    tree: ast.AST
+    tree: Optional[ast.AST] = None
+    language: str = "python"
     imports: Dict[str, str] = field(default_factory=dict)
     from_imports: Dict[str, Tuple[str, Optional[str]]] = field(default_factory=dict)
     assignments: Dict[str, List[Tuple[int, ast.AST]]] = field(default_factory=dict)
@@ -42,7 +43,7 @@ class ParsedFile:
 
 
 class PythonParser:
-    """Parser AST para archivos Python."""
+    """Parser multilingüe y AST para archivos de código fuente."""
 
     SOURCE_FUNCTIONS: Set[str] = {
         "input", "raw_input",
@@ -71,20 +72,39 @@ class PythonParser:
             return None
 
     def parse_source(self, source: str, file_path: str = "<string>") -> Optional[ParsedFile]:
-        try:
-            tree = ast.parse(source, filename=file_path)
-        except SyntaxError:
-            return None
-
         lines = source.splitlines()
-        parsed = ParsedFile(
+        lang = detect_language(file_path) or "unknown"
+
+        if lang == "python":
+            try:
+                tree = ast.parse(source, filename=file_path)
+                parsed = ParsedFile(
+                    file_path=file_path,
+                    source=source,
+                    lines=lines,
+                    tree=tree,
+                    language="python",
+                )
+                self._collect_metadata(tree, parsed)
+                return parsed
+            except SyntaxError:
+                # Si falla el parseo AST de Python, retornamos ParsedFile sin AST para escaneo léxico
+                return ParsedFile(
+                    file_path=file_path,
+                    source=source,
+                    lines=lines,
+                    tree=None,
+                    language="python",
+                )
+
+        # Para otros lenguajes (TypeScript, JavaScript, PHP, Java, etc.)
+        return ParsedFile(
             file_path=file_path,
             source=source,
             lines=lines,
-            tree=tree,
+            tree=None,
+            language=lang,
         )
-        self._collect_metadata(tree, parsed)
-        return parsed
 
     def _collect_metadata(self, tree: ast.AST, parsed: ParsedFile) -> None:
         for node in ast.walk(tree):
@@ -185,9 +205,46 @@ class PythonParser:
 
 def detect_language(file_path: str) -> Optional[str]:
     """Detecta el lenguaje de un archivo por extensión."""
-    ext = Path(file_path).suffix.lower()
+    path = Path(file_path)
+    name = path.name.lower()
+    ext = path.suffix.lower()
+
+    if name == ".env" or name.startswith(".env."):
+        return "config"
+
     mapping = {
         ".py": "python",
         ".pyw": "python",
+        ".js": "javascript",
+        ".jsx": "javascript",
+        ".mjs": "javascript",
+        ".cjs": "javascript",
+        ".ts": "typescript",
+        ".tsx": "typescript",
+        ".html": "html",
+        ".htm": "html",
+        ".vue": "vue",
+        ".svelte": "svelte",
+        ".php": "php",
+        ".phtml": "php",
+        ".java": "java",
+        ".kt": "kotlin",
+        ".go": "go",
+        ".rb": "ruby",
+        ".c": "c",
+        ".cpp": "cpp",
+        ".cc": "cpp",
+        ".h": "c",
+        ".hpp": "cpp",
+        ".cs": "csharp",
+        ".sql": "sql",
+        ".sh": "shell",
+        ".bash": "shell",
+        ".ps1": "powershell",
+        ".json": "json",
+        ".yml": "yaml",
+        ".yaml": "yaml",
+        ".xml": "xml",
+        ".toml": "toml",
     }
     return mapping.get(ext)

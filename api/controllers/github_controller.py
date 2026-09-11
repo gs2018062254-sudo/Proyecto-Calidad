@@ -31,46 +31,23 @@ class GitHubController(BaseController):
 
     @classmethod
     def get_user(cls) -> Tuple[Response, int]:
-        """Valida el token y obtiene el perfil del usuario de GitHub."""
-        token = cls._extract_token()
-        if not token:
-            return cls.error("Token de autenticación no proporcionado.", 401)
-
-        try:
-            user = GitHubService.verify_and_get_user(token)
-            return cls.success({"ok": True, "user": user}, 200)
-        except PermissionError as exc:
-            return cls.error(str(exc), 401)
-        except Exception as exc:
-            return cls.error(f"Error al verificar usuario de GitHub: {exc}", 500)
+        """Informa que el acceso de usuario con token ha sido desactivado por seguridad."""
+        return cls.error(
+            "La conexión de cuentas de GitHub mediante token personal ha sido desactivada por políticas de seguridad y protección de credenciales.",
+            403,
+        )
 
     @classmethod
     def list_repos(cls) -> Tuple[Response, int]:
-        """Lista repositorios del usuario autenticado o de un usuario público."""
-        token = cls._extract_token()
-        username = request.args.get("username")
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 30))
-
-        if not token and not username:
-            return cls.error("Se requiere un token de acceso o el parámetro 'username'.", 400)
-
-        try:
-            repos = GitHubService.list_repositories(
-                token=token,
-                username=username,
-                page=page,
-                per_page=per_page,
-            )
-            return cls.success({"ok": True, "repos": repos}, 200)
-        except PermissionError as exc:
-            return cls.error(str(exc), 401)
-        except Exception as exc:
-            return cls.error(f"Error al listar repositorios: {exc}", 500)
+        """Informa que el listado privado con token ha sido desactivado por seguridad."""
+        return cls.error(
+            "La consulta de repositorios privados mediante token ha sido desactivada por políticas de seguridad. Utilice el escaneo anónimo por URL o identificador de repositorio público.",
+            403,
+        )
 
     @classmethod
     def scan_repo(cls) -> Tuple[Response, int]:
-        """Descarga un repositorio de GitHub y ejecuta el análisis SAST completo."""
+        """Descarga un repositorio público de GitHub y ejecuta el análisis SAST multilingüe seguro."""
         t0 = time.perf_counter()
         tmpdir = None
         sources: Dict[str, str] = {}
@@ -79,23 +56,18 @@ class GitHubController(BaseController):
             payload = request.get_json(force=True, silent=True) or {}
             repo_input = str(payload.get("repo") or "").strip()
             branch = str(payload.get("branch") or "").strip() or None
-            token = payload.get("token") or cls._extract_token()
 
             if not repo_input:
                 return cls.error("Debe especificar el repositorio (ej. 'propietario/repositorio' o URL).", 400)
 
             # Normalizar URL o formato 'owner/repo'
-            # Ejemplos aceptados:
-            # - "https://github.com/pallets/flask"
-            # - "http://github.com/pallets/flask.git"
-            # - "pallets/flask"
             clean_repo = repo_input.replace("https://github.com/", "").replace("http://github.com/", "")
             if clean_repo.endswith(".git"):
                 clean_repo = clean_repo[:-4]
             clean_repo = clean_repo.strip("/")
 
             parts = clean_repo.split("/")
-            if len(parts) < 2:
+            if len(parts) < 2 or not parts[0] or not parts[1]:
                 return cls.error(
                     f"Formato de repositorio inválido '{repo_input}'. Debe ser 'propietario/nombre' o URL de GitHub.",
                     400,
@@ -114,15 +86,15 @@ class GitHubController(BaseController):
             include_sarif = bool(payload.get("include_sarif", True))
             include_html = bool(payload.get("include_html", False))
 
-            # Descargar archivo zipball desde GitHub
+            # Descargar archivo zipball desde GitHub en modo anónimo (sin credenciales)
             zip_bytes = GitHubService.download_repo_zipball(
                 owner=owner,
                 repo=repo_name,
                 ref=branch,
-                token=token,
+                token=None,
             )
 
-            # Extraer archivos .py / .pyw en directorio temporal
+            # Extraer archivos de código en directorio temporal seguro
             tmpdir = tempfile.mkdtemp(prefix="sast_gh_")
             extracted_files = FileService.extract_zip_bytes(zip_bytes, tmpdir)
 
@@ -130,12 +102,11 @@ class GitHubController(BaseController):
                 # Comprobar si hubo archivos en tmpdir
                 for root, _, files in os.walk(tmpdir):
                     for fn in files:
-                        if fn.lower().endswith((".py", ".pyw")):
-                            extracted_files.append(os.path.join(root, fn))
+                        extracted_files.append(os.path.join(root, fn))
 
             if not extracted_files:
                 return cls.error(
-                    f"El repositorio '{owner}/{repo_name}' no contiene archivos Python (.py / .pyw) analizables en la rama '{branch or 'default'}'.",
+                    f"El repositorio '{owner}/{repo_name}' no contiene archivos de código fuente analizables en la rama '{branch or 'default'}'.",
                     400,
                 )
 

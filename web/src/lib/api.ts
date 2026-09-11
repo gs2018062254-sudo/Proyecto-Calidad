@@ -136,18 +136,12 @@ export interface GitHubScanParams {
 }
 
 export async function runGitHubScan(p: GitHubScanParams): Promise<ScanResponse> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (p.token && p.token.trim()) {
-    headers.Authorization = `Bearer ${p.token.trim()}`;
-  }
-
   return request<ScanResponse>("/api/github/scan", {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       repo: p.repo,
       branch: p.branch,
-      token: p.token,
       min_confidence: p.min_confidence,
       min_severity: p.min_severity,
       exclude_tests: p.exclude_tests,

@@ -396,7 +396,6 @@ export const useSastStore = create<SastStore>((set, get) => {
     loadDemo: () => {
       set({
         mode: "paste",
-        pasteValue: DEMO_SOURCE,
         pasteFilename: "demo.py",
         status: "idle",
         result: null,
@@ -408,10 +407,14 @@ export const useSastStore = create<SastStore>((set, get) => {
         nativeFiles: [],
         files: [],
       });
+      set({
+        pasteValue: DEMO_SOURCE,
+      });
       if (typeof window !== "undefined") {
         try {
-          // Manda evento para que Home haga scroll hasta el editor
-          window.dispatchEvent(new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }));
+          window.dispatchEvent(
+            new CustomEvent("sast:load-demo", { detail: { at: nowISO() } }),
+          );
         } catch {}
       }
     },

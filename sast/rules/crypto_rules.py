@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from typing import List
 
 from .base import BaseRule
@@ -48,12 +49,49 @@ class WeakCryptographyRule(BaseRule):
     def check(self, parsed: ParsedFile) -> List[Finding]:
         findings: List[Finding] = []
 
-        for func_name, call_node, line in parsed.function_calls:
-            findings.extend(self._check_hashlib(func_name, call_node, line, parsed))
-            findings.extend(self._check_pycrypto(func_name, call_node, line, parsed))
-            findings.extend(self._check_insecure_random(func_name, call_node, line, parsed))
+        if parsed.tree is not None:
+            for func_name, call_node, line in parsed.function_calls:
+                findings.extend(self._check_hashlib(func_name, call_node, line, parsed))
+                findings.extend(self._check_pycrypto(func_name, call_node, line, parsed))
+                findings.extend(self._check_insecure_random(func_name, call_node, line, parsed))
 
-        findings.extend(self._check_constants(parsed))
+            findings.extend(self._check_constants(parsed))
+
+        findings.extend(self._check_multilang_crypto(parsed))
+        return findings
+
+    def _check_multilang_crypto(self, parsed: ParsedFile) -> List[Finding]:
+        """Detecta criptografía débil en JS/TS, PHP, Java, etc."""
+        findings: List[Finding] = []
+        patterns = [
+            (re.compile(r"""\b(?:createHash|createHmac)\s*\(\s*['"](?:md5|sha1|md4)['"]"""), "WEAK_HASH_MD5_SHA1", "Uso de MD5 o SHA-1 en Node.js/JavaScript: algoritmos vulnerables a colisiones.", "CWE-327", "high"),
+            (re.compile(r"""\bCryptoJS\.(?:MD5|SHA1)\s*\("""), "WEAK_HASH_CRYPTOJS", "Uso de CryptoJS con hash MD5/SHA1 débil.", "CWE-327", "high"),
+            (re.compile(r"""\b(?:md5|sha1)\s*\("""), "WEAK_HASH_PHP_C", "Invocación directa de función hash obsoleta (md5/sha1).", "CWE-327", "medium"),
+            (re.compile(r"""\bMessageDigest\.getInstance\s*\(\s*["'](?:MD5|SHA-1)["']"""), "WEAK_HASH_JAVA", "MessageDigest en Java usando algoritmo obsoleto (MD5/SHA-1).", "CWE-327", "high"),
+        ]
+        for line_num, line in enumerate(parsed.lines, start=1):
+            trimmed = line.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            for pat, rule_sub_id, desc, cwe, sev in patterns:
+                m = pat.search(line)
+                if m:
+                    finding = Finding(
+                        rule_id=f"{self.rule_id}_{rule_sub_id}",
+                        title="Algoritmo Criptográfico Débil",
+                        severity=Severity.from_str(sev),
+                        file_path=parsed.file_path,
+                        line=line_num,
+                        column=m.start() + 1,
+                        description=desc,
+                        cwe=cwe,
+                        owasp=self.owasp,
+                        confidence=0.88,
+                        evidence=parsed.get_line(line_num),
+                        recommendation=self.recommendation,
+                    )
+                    findings.append(finding)
+                    break
         return findings
 
     def _check_hashlib(self, func_name: str, call_node: ast.Call, line: int, parsed: ParsedFile) -> List[Finding]:

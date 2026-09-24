@@ -12,23 +12,15 @@ import {
   ExternalLink,
   ArrowRight,
   CalendarDays,
-  Clock,
 } from "lucide-react";
 import { formatDateTime, formatTime } from "../lib/datetime";
 
-const SEV_CHIP: Record<string, string> = {
-  critical: "chip-red",
-  high: "chip-amber",
-  medium: "chip-amber",
-  low: "chip-green",
-  info: "chip-blue",
-};
-const SEV_STYLE_BG: Record<string, string> = {
-  critical: "#fee2e2",
-  high: "#fef3c7",
-  medium: "#fef9c3",
-  low: "#d1fae5",
-  info: "#dbeafe",
+const SEV_CLASS: Record<string, string> = {
+  critical: "studio-sev-critical",
+  high: "studio-sev-high",
+  medium: "studio-sev-medium",
+  low: "studio-sev-low",
+  info: "studio-sev-info",
 };
 
 export default function FindingsList() {
@@ -46,16 +38,16 @@ export default function FindingsList() {
   if (!result) return null;
 
   const allFiles = Object.keys(result.sources || {});
-  const rawFindings = Array.isArray(result.findings) ? result.findings : [];
+  const rawFindings: FindingDto[] = Array.isArray(result.findings) ? result.findings : [];
 
   const filtered: FindingDto[] = rawFindings
-    .filter((f) => {
+    .filter((f: FindingDto) => {
       if (!f) return false;
       if (activeFilter !== "all" && f.severity !== activeFilter) return false;
       if (activeFile && f.file_path !== activeFile) return false;
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: FindingDto, b: FindingDto) => {
       const sA = severityOrder((a?.severity ?? "info") as any) || 0;
       const sB = severityOrder((b?.severity ?? "info") as any) || 0;
       const cA = typeof a?.confidence === "number" ? a.confidence : 0;
@@ -63,49 +55,44 @@ export default function FindingsList() {
       return sA - sB || cB - cA;
     });
 
-  const filters: { value: Severity | "all"; label: string; emoji: string; color: string }[] = [
-    { value: "all", label: "Todos", emoji: "🛡️", color: "#64748b" },
-    { value: "critical", label: "Crítico", emoji: "🔴", color: "#dc2626" },
-    { value: "high", label: "Alto", emoji: "🟠", color: "#b45309" },
-    { value: "medium", label: "Medio", emoji: "🟡", color: "#a16207" },
-    { value: "low", label: "Bajo", emoji: "🟢", color: "#047857" },
-    { value: "info", label: "Info", emoji: "🔵", color: "#1d4ed8" },
+  const filters: { value: Severity | "all"; label: string; color: string }[] = [
+    { value: "all", label: "Todos", color: "#94a3b8" },
+    { value: "critical", label: "Crítico", color: "#fda4af" },
+    { value: "high", label: "Alto", color: "#fdba74" },
+    { value: "medium", label: "Medio", color: "#fde047" },
+    { value: "low", label: "Bajo", color: "#6ee7b7" },
+    { value: "info", label: "Info", color: "#93c5fd" },
   ];
 
   const timeOfScan = result.timestamp;
 
   return (
-    <div className="card p-5 space-y-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
+    <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--studio-border)] bg-[var(--studio-panel)] space-y-3.5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="chip chip-gray inline-flex items-center gap-1.5">
-            <Filter size={12} /> Filtros
-          </div>
-          <div className="flex flex-wrap gap-1.5">
+          <span className="studio-badge">
+            <Filter size={11} /> Filtros
+          </span>
+          <div className="flex flex-wrap gap-1">
             {filters.map((f) => {
               const active = activeFilter === f.value;
-              const styleBtn: React.CSSProperties = active
-                ? { color: f.color, borderColor: `${f.color}66`, background: `${f.color}14` }
-                : {};
               const count =
                 f.value === "all"
                   ? rawFindings.length
-                  : rawFindings.filter((x) => x?.severity === f.value).length;
+                  : rawFindings.filter((x: FindingDto) => x?.severity === f.value).length;
               return (
                 <button
                   key={f.value}
                   onClick={() => setActiveFilter(f.value as Severity)}
                   className={clsx(
-                    "px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition border flex items-center gap-1",
+                    "px-2.5 py-1 rounded-[var(--radius-sm)] text-xs font-medium transition border flex items-center gap-1",
                     active
-                      ? "shadow-soft"
-                      : "bg-white border-surface-200 text-surface-500 hover:bg-surface-50 hover:text-surface-800",
+                      ? "bg-[var(--studio-surface-active)] border-blue-500/60 text-white font-semibold"
+                      : "bg-[var(--studio-surface)] border-[var(--studio-border)] text-[var(--studio-text-secondary)] hover:text-slate-200",
                   )}
-                  style={styleBtn}
                 >
-                  <span>{f.emoji}</span>
                   {f.label}
-                  <span className="opacity-70 ml-0.5 font-mono">({count})</span>
+                  <span className="text-[10px] opacity-75 font-mono">({count})</span>
                 </button>
               );
             })}
@@ -114,7 +101,7 @@ export default function FindingsList() {
 
         <div className="flex items-center gap-2 flex-wrap">
           {timeOfScan && (
-            <span className="chip chip-blue inline-flex items-center gap-1.5" title={formatDateTime(timeOfScan, { seconds: true })}>
+            <span className="studio-badge" title={formatDateTime(timeOfScan, { seconds: true })}>
               <CalendarDays size={11} />
               {formatTime(timeOfScan)}
             </span>
@@ -123,7 +110,7 @@ export default function FindingsList() {
             <select
               value={activeFile}
               onChange={(e) => setActiveFile(e.target.value)}
-              className="input-field !py-2 !w-auto min-w-[200px] text-[13px]"
+              className="studio-select !py-1 text-xs"
             >
               <option value="">Todos los archivos</option>
               {allFiles.map((f) => (
@@ -135,48 +122,44 @@ export default function FindingsList() {
           )}
           <div className="flex items-center gap-1">
             <button
-              className="btn-secondary !py-1.5 !px-2.5 text-xs"
+              className="studio-btn-secondary !py-1 !px-2 text-xs font-mono"
               onClick={exportJson}
               title="Exportar JSON"
             >
-              <FileJson size={13} /> JSON
+              <FileJson size={12} /> JSON
             </button>
             <button
-              className="btn-secondary !py-1.5 !px-2.5 text-xs"
+              className="studio-btn-secondary !py-1 !px-2 text-xs font-mono"
               onClick={exportSarif}
               title="Exportar SARIF 2.1"
             >
-              <FileCode size={13} /> SARIF
+              <FileCode size={12} /> SARIF
             </button>
             <button
-              className="btn-secondary !py-1.5 !px-2.5 text-xs"
+              className="studio-btn-secondary !py-1 !px-2 text-xs font-mono"
               onClick={exportHtml}
-              title="Exportar reporte HTML standalone"
+              title="Exportar reporte HTML"
             >
-              <FileText size={13} /> HTML
+              <FileText size={12} /> HTML
             </button>
           </div>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-success-50 border border-success-100 grid place-items-center text-success-600 mb-3">
-            ✨
+        <div className="text-center py-10 rounded-[var(--radius-md)] bg-[var(--studio-surface)] border border-[var(--studio-border)]">
+          <div className="font-display font-semibold text-white text-sm">
+            Sin hallazgos para los filtros seleccionados
           </div>
-          <div className="font-display font-semibold text-surface-800 text-lg">
-            No se encontraron hallazgos con estos filtros.
-          </div>
-          <div className="text-[13px] text-surface-500 mt-1">
-            Intenta reducir la severidad mínima o la confianza.
+          <div className="text-xs text-[var(--studio-text-secondary)] mt-1">
+            Ajusta los filtros de severidad o confianza en el panel lateral.
           </div>
         </div>
       ) : (
-        <div className="space-y-2 max-h-[70vh] overflow-auto scrollbar-thin pr-1">
+        <div className="space-y-2 max-h-[70vh] overflow-auto pr-1">
           {filtered.map((f, idx) => {
             const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
               color: "#64748b",
-              emoji: "ℹ️",
               labelEs: "Info",
             };
             const key = buildFindingKey(f, idx);
@@ -184,54 +167,43 @@ export default function FindingsList() {
             return (
               <div
                 key={key}
-                className={clsx(
-                  "rounded-xl border overflow-hidden transition-all bg-white hover:shadow-soft",
-                )}
+                className="rounded-[var(--radius-md)] border border-[var(--studio-border)] overflow-hidden bg-[var(--studio-panel)] hover:border-[var(--studio-border-bright)] transition-colors"
                 style={{
-                  borderColor: SEV_STYLE_BG[f.severity] ?? "#e2e8f0",
-                  borderLeftWidth: 4,
+                  borderLeftWidth: 3,
                   borderLeftColor: sev.color,
                 }}
               >
                 <button
-                  className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface-50 transition"
+                  className="w-full text-left px-3.5 py-2.5 flex items-start gap-2.5 hover:bg-[var(--studio-surface)] transition"
                   onClick={() => toggleExpand(key)}
                 >
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 text-slate-400 shrink-0">
                     {expanded ? (
-                      <ChevronDown size={16} className="text-surface-400" />
+                      <ChevronDown size={14} />
                     ) : (
-                      <ChevronRight size={16} className="text-surface-400" />
+                      <ChevronRight size={14} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`chip ${SEV_CHIP[f.severity] || "chip-gray"} !py-0.5`}>
-                        {sev.emoji} {sev.labelEs}
+                      <span className={`studio-badge ${SEV_CLASS[f.severity] || "studio-sev-info"} !text-[10px]`}>
+                        {sev.labelEs}
                       </span>
-                      <span className="font-display font-semibold text-surface-800 text-[14px]">
+                      <span className="font-display font-semibold text-slate-100 text-xs">
                         {f.title}
                       </span>
-                      <span className="ml-auto text-[11px] font-mono text-surface-400">
+                      <span className="ml-auto text-[11px] font-mono text-[var(--studio-text-secondary)]">
                         {f.rule_id}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[12px] flex-wrap">
-                      <span className="text-surface-500">
-                        <span className="text-surface-700 font-semibold">{f.file_path}</span>:
-                        <span className="text-primary-700 font-mono font-bold"> L{f.line}</span>
+                    <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
+                      <span className="text-[var(--studio-text-secondary)] font-mono text-[11px]">
+                        <span className="text-slate-200">{f.file_path}</span>:
+                        <span className="text-blue-400 font-bold">L{f.line}</span>
                         {f.column ? (
-                          <span className="text-surface-400 font-mono">
-                            :C{f.column}
-                          </span>
+                          <span className="text-slate-500">:C{f.column}</span>
                         ) : null}
                       </span>
-                      {timeOfScan && (
-                        <span className="text-surface-400 inline-flex items-center gap-1" title={formatDateTime(timeOfScan, { seconds: true })}>
-                          <Clock size={11} />
-                          Línea · {formatTime(timeOfScan)}
-                        </span>
-                      )}
                       {f.cwe && (
                         <a
                           href={`https://cwe.mitre.org/data/definitions/${f.cwe.replace(
@@ -240,14 +212,14 @@ export default function FindingsList() {
                           )}.html`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-surface-500 hover:text-primary-700 transition font-semibold"
+                          className="inline-flex items-center gap-0.5 text-[var(--studio-text-secondary)] hover:text-blue-400 transition font-mono text-[11px]"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {f.cwe} <ExternalLink size={10} />
                         </a>
                       )}
                       <div className="ml-auto flex items-center gap-2">
-                        <div className="w-20 h-1.5 rounded-full bg-surface-100 overflow-hidden">
+                        <div className="w-12 h-1 rounded-full bg-slate-800 overflow-hidden">
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -257,7 +229,7 @@ export default function FindingsList() {
                           />
                         </div>
                         <span
-                          className="font-mono font-bold text-[11px]"
+                          className="font-mono font-semibold text-[11px]"
                           style={{ color: confidenceColor(f.confidence) }}
                         >
                           {Math.round(f.confidence * 100)}%
@@ -268,7 +240,7 @@ export default function FindingsList() {
                 </button>
 
                 {expanded && (
-                  <div className="px-4 pb-4 pt-0 space-y-3 border-t border-surface-100 animate-fade-up">
+                  <div className="px-4 pb-3.5 pt-2 border-t border-[var(--studio-border)] bg-[var(--studio-surface)]/50">
                     <FindingDetail f={f} />
                   </div>
                 )}
@@ -284,30 +256,29 @@ export default function FindingsList() {
 function FindingDetail({ f }: { f: FindingDto }) {
   const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
     color: "#64748b",
-    emoji: "ℹ️",
     labelEs: "Info",
   };
   const owaspClean = (f.owasp || "").toString().split("-")[0];
   return (
-    <div className="space-y-3 pt-3">
+    <div className="space-y-3 pt-1">
       <div>
-        <div className="text-[11px] uppercase tracking-widest text-surface-500 font-bold mb-1.5">
-          Descripción
+        <div className="text-xs font-semibold text-[var(--studio-text-secondary)] mb-1">
+          Descripción técnica del hallazgo
         </div>
-        <p className="text-[14px] text-surface-700 leading-relaxed">
-          {f.description || "Sin descripción."}
+        <p className="text-xs text-slate-300 leading-relaxed">
+          {f.description || "Sin descripción disponible."}
         </p>
       </div>
 
       {f.evidence && (
         <div>
-          <div className="text-[11px] uppercase tracking-widest text-surface-500 font-bold mb-1.5">
-            Evidencia (L{f.line})
+          <div className="text-xs font-semibold text-[var(--studio-text-secondary)] mb-1">
+            Evidencia en línea {f.line}
           </div>
           <pre
-            className="code-line rounded-lg p-3 bg-surface-50 border border-surface-200 overflow-auto"
+            className="rounded-[var(--radius-sm)] p-2.5 bg-[#080d1a] border border-[var(--studio-border)] text-rose-300 overflow-x-auto text-xs font-mono"
             style={{
-              boxShadow: `inset 3px 0 0 ${sev.color}`,
+              borderLeft: `3px solid ${sev.color}`,
             }}
           >
             <code>{f.evidence}</code>
@@ -317,37 +288,27 @@ function FindingDetail({ f }: { f: FindingDto }) {
 
       {f.data_flow && Array.isArray(f.data_flow) && f.data_flow.length > 0 && (
         <div>
-          <div className="text-[11px] uppercase tracking-widest text-surface-500 font-bold mb-1.5">
-            Flujo de datos (Taint Analysis)
+          <div className="text-xs font-semibold text-[var(--studio-text-secondary)] mb-1">
+            Ruta de propagación (Taint Flow)
           </div>
-          <ol className="space-y-1.5">
+          <ol className="space-y-1">
             {f.data_flow.map((step, i) => {
               const safeStep = step ?? { step: i + 1, line: "?", variable: "" };
               return (
                 <li
                   key={i}
-                  className="flex items-start gap-2.5 rounded-lg bg-surface-50 border border-surface-200 px-3 py-2"
+                  className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-[var(--studio-border)] px-2.5 py-1.5 text-xs font-mono"
                 >
-                  <div
-                    className="w-6 h-6 rounded-md grid place-items-center text-[11px] font-bold shrink-0 text-white"
-                    style={{ background: sev.color }}
-                  >
+                  <span className="w-4 h-4 rounded-[2px] bg-blue-950 text-blue-400 border border-blue-800/60 grid place-items-center text-[10px] font-bold shrink-0">
                     {safeStep.step ?? i + 1}
-                  </div>
-                  <div className="min-w-0 flex-1 text-[13px]">
-                    <span className="text-primary-700 font-mono font-bold">
-                      {safeStep.variable ?? "—"}
-                    </span>
-                    <span className="text-surface-400 mx-1.5">
-                      <ArrowRight size={12} className="inline" />
-                    </span>
-                    <span className="text-surface-600">
-                      línea{" "}
-                      <span className="font-mono text-primary-700 font-bold">
-                        {safeStep.line ?? "?"}
-                      </span>
-                    </span>
-                  </div>
+                  </span>
+                  <span className="text-blue-300 font-semibold">
+                    {safeStep.variable ?? "—"}
+                  </span>
+                  <ArrowRight size={10} className="text-slate-500" />
+                  <span className="text-[var(--studio-text-secondary)]">
+                    línea <span className="text-slate-200 font-semibold">{safeStep.line ?? "?"}</span>
+                  </span>
                 </li>
               );
             })}
@@ -356,18 +317,18 @@ function FindingDetail({ f }: { f: FindingDto }) {
       )}
 
       <div>
-        <div className="text-[11px] uppercase tracking-widest text-surface-500 font-bold mb-1.5">
-          Recomendación
+        <div className="text-xs font-semibold text-emerald-400 mb-1">
+          Remediación sugerida
         </div>
-        <p className="text-[14px] text-success-700 leading-relaxed bg-success-50/60 border border-success-100 rounded-xl p-3">
-          💡 {f.recommendation || "Sin recomendación."}
+        <p className="text-xs text-emerald-300 leading-relaxed bg-emerald-950/20 border border-emerald-800/40 rounded-[var(--radius-sm)] p-2.5">
+          {f.recommendation || "Sin recomendación específica disponible."}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-1">
-        {owaspClean && <span className="chip chip-purple">OWASP · {owaspClean}</span>}
-        {f.source && <span className="chip chip-blue">Source: {f.source}</span>}
-        {f.sink && <span className="chip chip-amber">Sink: {f.sink}</span>}
+      <div className="flex flex-wrap gap-1.5 pt-1 font-mono text-[11px]">
+        {owaspClean && <span className="studio-badge">OWASP: {owaspClean}</span>}
+        {f.source && <span className="studio-badge text-blue-300">Fuente: {f.source}</span>}
+        {f.sink && <span className="studio-badge text-amber-300">Sumidero: {f.sink}</span>}
       </div>
     </div>
   );

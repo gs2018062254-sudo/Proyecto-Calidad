@@ -7,7 +7,6 @@ import {
   FileText,
   FileImage,
   Search,
-  BarChart3,
   CalendarRange,
   FilterX,
   FileCode,
@@ -17,7 +16,7 @@ import {
   ShieldCheck,
   FileWarning,
 } from "lucide-react";
-import { formatDateTime, formatRelative, formatDate, parseDate } from "../lib/datetime";
+import { formatDateTime, formatDate, parseDate } from "../lib/datetime";
 import { useNavigate } from "react-router-dom";
 
 export default function Reports() {
@@ -98,85 +97,58 @@ export default function Reports() {
       if (groupBy === "day") {
         key = formatDate(d);
       } else {
-        const wk = new Date(d);
-        const day = wk.getDay() || 7;
-        wk.setDate(wk.getDate() + 4 - day);
-        const yearStart = new Date(wk.getFullYear(), 0, 1);
-        const week = Math.ceil(((wk.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-        key = `${wk.getFullYear()}-W${week}`;
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d);
+        monday.setDate(diff);
+        key = `Semana del ${formatDate(monday)}`;
       }
       const arr = map.get(key) || [];
       arr.push(h);
       map.set(key, arr);
     }
-    const out = [...map.entries()]
-      .map(([key, list]) => {
-        let crit = 0;
-        let high = 0;
-        let med = 0;
-        let findings = 0;
-        for (const h of list) {
-          crit += h.summary.critical || 0;
-          high += h.summary.high || 0;
-          med += h.summary.medium || 0;
-          findings += h.severity_count;
-        }
-        const label =
-          list[0] && groupBy === "day" ? formatDate(list[0].created_at) : key;
-        return { key, label, entries: list, crit, high, med, findings };
-      })
-      .sort((a, b) => a.key.localeCompare(b.key));
-    return out;
+    return Array.from(map.entries()).map(([key, list]) => {
+      let crit = 0;
+      let high = 0;
+      let med = 0;
+      let findings = 0;
+      for (const item of list) {
+        crit += item.summary.critical || 0;
+        high += item.summary.high || 0;
+        med += item.summary.medium || 0;
+        findings += item.severity_count;
+      }
+      return {
+        key,
+        label: key,
+        entries: list,
+        crit,
+        high,
+        med,
+        findings,
+      };
+    });
   }, [entries, groupBy]);
 
-  // Export aggregated JSON report
   const exportAggregateJson = () => {
-    const stamp = new Date();
-    const data = {
-      generated_at: stamp.toISOString(),
-      generated_at_local: formatDateTime(stamp, { seconds: true }),
-      filters: {
-        q,
-        minVulns,
-        format,
-        groupBy,
-        match_entries: entries.length,
-      },
+    const safe = {
+      title: "SAST Studio · Reporte Agregado",
+      generated_at: new Date().toISOString(),
       metrics,
-      timeline: grouped.map((g) => ({
-        bucket: g.key,
-        label: g.label,
-        samples: g.entries.length,
-        critical: g.crit,
-        high: g.high,
-        medium: g.med,
-        findings_total: g.findings,
-      })),
-      entries: entries.map((h) => ({
-        id: h.id,
-        created_at: h.created_at,
-        target: h.target,
-        mode: h.mode,
-        files: h.files,
-        duration_ms: h.duration_ms,
-        severity_max: h.severity_max,
-        summary: h.summary,
-        filters_applied: h.result.filters_applied,
-        findings_count: h.severity_count,
+      entries_count: entries.length,
+      entries: entries.map((e) => ({
+        id: e.id,
+        target: e.target,
+        created_at: e.created_at,
+        severity_count: e.severity_count,
+        severity_max: e.severity_max,
+        summary: e.summary,
+        files: e.files,
       })),
     };
-    const safe = (n: string) => n.replace(/[^a-z0-9._-]+/gi, "_");
-    const stampStr = new Date().toISOString();
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const sDate = new Date();
-    const filename =
-      `sast-report_aggregate_${sDate.getFullYear()}-${pad(sDate.getMonth() + 1)}-${pad(sDate.getDate())}_` +
-      `${pad(sDate.getHours())}-${pad(sDate.getMinutes())}-${pad(sDate.getSeconds())}.json`;
-    const blob = JSON.stringify(data, null, 2);
-    const b64 =
-      typeof window !== "undefined"
-        ? btoa(unescape(encodeURIComponent(blob)))
-        : "";
+    const jsonStr = JSON.stringify(safe, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    const filename = `sast_aggregate_report_${Date.now()}.json`;
     if (typeof document !== "undefined") {
       const a = document.createElement("a");
       a.href = `data:application/json;charset=utf-8;base64,${b64}`;
@@ -185,9 +157,6 @@ export default function Reports() {
       a.click();
       a.remove();
     }
-    // silence unused safe
-    void safe;
-    void stampStr;
   };
 
   const maxBar = Math.max(
@@ -196,120 +165,119 @@ export default function Reports() {
   );
 
   return (
-    <div className="max-w-[1500px] mx-auto space-y-6 animate-fade-up">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="label-title mb-2">Reportes · precisos con marca de tiempo</div>
-          <h1 className="section-title">Panel de reportes agregados</h1>
-          <p className="mt-2 text-[15px] text-surface-500 max-w-2xl leading-relaxed">
-            Métricas acumuladas, timeline por día / semana y reporte agregado exportable.
-            Todos los datos incluyen fecha y hora exactas (UTC convertido a tu zona local).
+    <div className="max-w-[1400px] mx-auto space-y-6">
+      {/* Console Header */}
+      <section className="studio-console-header">
+        <div className="studio-title-group">
+          <h1>Panel de Reportes y Telemetría Agregada</h1>
+          <p>
+            Métricas acumuladas, series temporales por periodo y descarga consolidada de auditorías.
+            Registros sincronizados con timestamps UTC y visualización local.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="chip chip-blue inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse" /> Live sync
+        <div className="flex items-center gap-2.5">
+          <span className="studio-badge text-blue-400">
+            {entries.length} auditorías en el historial
           </span>
-          <button className="btn-primary" onClick={exportAggregateJson}>
-            <Download size={14} /> Reporte agregado (JSON)
+          <button className="studio-btn-primary" onClick={exportAggregateJson}>
+            <Download size={13} /> Exportar reporte consolidado (JSON)
           </button>
         </div>
-      </header>
+      </section>
 
-      {/* Top KPI cards */}
-      <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="stat-card bg-white border-primary-100">
+      {/* Top KPI Grid */}
+      <section className="grid grid-cols-2 md:grid-cols-6 gap-2.5">
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-lg bg-primary-50 border border-primary-100 grid place-items-center text-primary-700">
-              <BarChart3 size={14} />
-            </div>
-            <TrendingUp size={12} className="text-primary-600" />
+            <span className="text-[11px] font-mono text-[var(--studio-text-secondary)]">Auditorías</span>
+            <TrendingUp size={12} className="text-blue-400" />
           </div>
-          <div className="text-[12px] font-semibold text-surface-500 mt-2">Análisis</div>
-          <div className="font-display font-bold text-2xl text-surface-900">{metrics.totalEntries}</div>
+          <div className="font-display font-bold text-2xl text-white mt-1 tabular-nums">
+            {metrics.totalEntries}
+          </div>
         </div>
-        <div className="stat-card bg-white border-danger-100">
+
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-rose-900/30 bg-[var(--studio-panel)]">
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-lg bg-danger-50 border border-danger-100 grid place-items-center text-danger-600">
-              <AlertTriangle size={14} />
-            </div>
-            <span className="chip chip-red">{metrics.critical} crit</span>
+            <span className="text-[11px] font-mono text-rose-400">Hallazgos</span>
+            <AlertTriangle size={12} className="text-rose-400" />
           </div>
-          <div className="text-[12px] font-semibold text-surface-500 mt-2">Hallazgos totales</div>
-          <div className="font-display font-bold text-2xl text-danger-700">{metrics.totalFindings}</div>
+          <div className="font-display font-bold text-2xl text-rose-400 mt-1 tabular-nums">
+            {metrics.totalFindings}
+          </div>
         </div>
-        <div className="stat-card bg-white border-warning-100">
-          <div className="text-[12px] font-semibold text-surface-500">Críticos</div>
-          <div className="font-display font-bold text-2xl text-warning-700 mt-1">{metrics.critical}</div>
+
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-rose-900/30 bg-[var(--studio-panel)]">
+          <span className="text-[11px] font-mono text-rose-300">Críticos</span>
+          <div className="font-display font-bold text-2xl text-rose-300 mt-1 tabular-nums">
+            {metrics.critical}
+          </div>
         </div>
-        <div className="stat-card bg-white border-[#fde68a]">
-          <div className="text-[12px] font-semibold text-surface-500">Altos</div>
-          <div className="font-display font-bold text-2xl text-[#b45309] mt-1">{metrics.high}</div>
+
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-amber-900/30 bg-[var(--studio-panel)]">
+          <span className="text-[11px] font-mono text-amber-400">Altos</span>
+          <div className="font-display font-bold text-2xl text-amber-400 mt-1 tabular-nums">
+            {metrics.high}
+          </div>
         </div>
-        <div className="stat-card bg-white border-success-100">
+
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-emerald-900/30 bg-[var(--studio-panel)]">
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-lg bg-success-50 border border-success-100 grid place-items-center text-success-700">
-              <ShieldCheck size={14} />
-            </div>
+            <span className="text-[11px] font-mono text-emerald-400">Código limpio</span>
+            <ShieldCheck size={12} className="text-emerald-400" />
           </div>
-          <div className="text-[12px] font-semibold text-surface-500 mt-2">Limpios</div>
-          <div className="font-display font-bold text-2xl text-success-700 mt-1">
-            {metrics.clean}
-            <span className="text-[13px] ml-1 text-surface-500 font-semibold">
-              ({metrics.cleanRate.toFixed(0)}%)
-            </span>
+          <div className="font-display font-bold text-2xl text-emerald-400 mt-1 tabular-nums">
+            {metrics.cleanRate.toFixed(0)}%
           </div>
         </div>
-        <div className="stat-card bg-white border-primary-100">
-          <div className="text-[12px] font-semibold text-surface-500">Promedio por análisis</div>
-          <div className="font-display font-bold text-2xl text-primary-700 mt-1">
+
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
+          <span className="text-[11px] font-mono text-[var(--studio-text-secondary)]">Promedio / escaneo</span>
+          <div className="font-display font-bold text-2xl text-blue-400 mt-1 tabular-nums">
             {metrics.avgFindings.toFixed(1)}
-            <span className="text-[12px] ml-1 text-danger-600 font-semibold">
-              ({metrics.avgCritical.toFixed(1)} crit)
-            </span>
           </div>
         </div>
       </section>
 
-      {/* Filters */}
-      <section className="card p-4 flex flex-wrap items-end gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
+      {/* Filter Toolbar */}
+      <section className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] flex flex-wrap items-end gap-3">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar en reportes..."
-            className="input-field pl-10"
+            placeholder="Buscar por nombre de archivo o regla..."
+            className="w-full studio-input !pl-9"
           />
         </div>
         <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">Mín. vulnerabilidades</label>
+          <label className="text-[11px] text-[var(--studio-text-secondary)] block mb-1">Mín. vulnerabilidades</label>
           <input
             type="number"
             min={0}
-            max={9999}
+            max={999}
             value={minVulns}
             onChange={(e) => setMinVulns(Math.max(0, Number(e.target.value) || 0))}
-            className="input-field !w-[160px] !py-2"
+            className="studio-input !w-[110px]"
           />
         </div>
         <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">Agrupar timeline</label>
+          <label className="text-[11px] text-[var(--studio-text-secondary)] block mb-1">Agrupar serie</label>
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as "day" | "week")}
-            className="input-field !py-2"
+            className="studio-select"
           >
             <option value="day">Por día</option>
             <option value="week">Por semana</option>
           </select>
         </div>
         <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">Soporte formato</label>
+          <label className="text-[11px] text-[var(--studio-text-secondary)] block mb-1">Formato</label>
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as typeof format)}
-            className="input-field !py-2"
+            className="studio-select"
           >
             <option value="all">Todos</option>
             <option value="json">Solo JSON</option>
@@ -318,95 +286,88 @@ export default function Reports() {
           </select>
         </div>
         <button
-          className="btn-secondary"
+          className="studio-btn-secondary"
           onClick={() => {
             setQ("");
             setMinVulns(0);
             setFormat("all");
           }}
         >
-          <FilterX size={14} /> Limpiar filtros
+          <FilterX size={13} /> Limpiar
         </button>
       </section>
 
-      {/* Timeline chart */}
-      <section className="card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* Timeline Section */}
+      <section className="p-4 rounded-[var(--radius-lg)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
           <div>
-            <div className="label-title mb-1">Timeline</div>
-            <h2 className="font-display font-bold text-[20px] text-surface-900 leading-tight">
-              Evolución de vulnerabilidades
+            <h2 className="font-display font-bold text-base text-white">
+              Evolución Temporal de Vulnerabilidades
             </h2>
-            <div className="text-[12px] text-surface-500 mt-0.5">
-              Agrupado <b className="text-surface-700">{groupBy === "day" ? "por día" : "por semana"}</b>.
-              Colores según severidad.
+            <div className="text-xs text-[var(--studio-text-secondary)] mt-0.5">
+              Agrupado {groupBy === "day" ? "diariamente" : "semanalmente"}. Distribución por severidad.
             </div>
           </div>
-          <div className="flex items-center gap-3 text-[12px] font-semibold text-surface-600">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-danger-500" /> Crítico
+          <div className="flex items-center gap-3 text-xs font-mono">
+            <span className="inline-flex items-center gap-1.5 text-rose-400">
+              <span className="w-2 h-2 rounded-full bg-rose-500" /> Crítico
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-warning-500" /> Alto
+            <span className="inline-flex items-center gap-1.5 text-amber-400">
+              <span className="w-2 h-2 rounded-full bg-amber-500" /> Alto
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-[#eab308]" /> Medio
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-surface-300" /> Hallazgos totales
+            <span className="inline-flex items-center gap-1.5 text-yellow-400">
+              <span className="w-2 h-2 rounded-full bg-yellow-500" /> Medio
             </span>
           </div>
         </div>
 
         {grouped.length === 0 ? (
-          <div className="py-14 text-center">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-surface-50 border border-surface-200 grid place-items-center text-surface-400 mb-3">
-              <Shield size={24} />
+          <div className="py-12 text-center">
+            <div className="mx-auto w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] grid place-items-center text-slate-500 mb-2">
+              <Shield size={18} />
             </div>
-            <div className="font-display font-bold text-surface-800 text-lg">
-              Sin datos que mostrar
-            </div>
-            <div className="mt-1 text-[13px] text-surface-500">
-              Ejecuta un análisis o ajusta los filtros actuales.
+            <div className="font-display font-semibold text-sm text-slate-300">
+              Sin registros para los filtros actuales
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {grouped.map((g) => {
               const pCrit = (g.crit / maxBar) * 100;
               const pHigh = (g.high / maxBar) * 100;
               const pMed = (g.med / maxBar) * 100;
               const pAll = (g.findings / maxBar) * 100;
+
               return (
-                <div key={g.key} className="group">
-                  <div className="flex items-center justify-between text-[12px] mb-1.5">
+                <div key={g.key}>
+                  <div className="flex items-center justify-between text-xs font-mono mb-1 text-[var(--studio-text-secondary)]">
                     <div className="flex items-center gap-2">
-                      <CalendarRange size={12} className="text-surface-400" />
-                      <span className="font-semibold text-surface-700">{g.label}</span>
-                      <span className="chip chip-gray !py-0.5">
-                        {g.entries.length} anális{g.entries.length === 1 ? "" : "es"}
+                      <CalendarRange size={12} className="text-blue-400" />
+                      <span className="text-slate-200 font-semibold">{g.label}</span>
+                      <span className="studio-badge !text-[10px]">
+                        {g.entries.length} escaneo{g.entries.length === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <div className="font-mono text-surface-600">
-                      <span className="text-danger-600 font-bold">{g.crit}</span> ·{" "}
-                      <span className="text-warning-700 font-bold">{g.high}</span> ·{" "}
-                      <span className="text-[#a16207] font-bold">{g.med}</span> ·{" "}
-                      <span className="text-surface-700 font-bold">∑ {g.findings}</span>
+                    <div>
+                      <span className="text-rose-400 font-bold">{g.crit}C</span> ·{" "}
+                      <span className="text-amber-400 font-bold">{g.high}A</span> ·{" "}
+                      <span className="text-yellow-400 font-bold">{g.med}M</span> ·{" "}
+                      <span className="text-slate-200 font-bold">Total: {g.findings}</span>
                     </div>
                   </div>
-                  <div className="relative h-10 rounded-xl bg-surface-50 border border-surface-200 overflow-hidden">
-                    <div className="absolute inset-y-0 left-0 bg-surface-200/70 rounded-l-xl" style={{ width: `${Math.min(100, pAll)}%` }} />
+                  <div className="relative h-4 rounded-[var(--radius-sm)] bg-slate-900 overflow-hidden border border-[var(--studio-border)]">
+                    <div className="absolute inset-y-0 left-0 bg-slate-800/80" style={{ width: `${Math.min(100, pAll)}%` }} />
                     <div
-                      className="absolute bottom-0 left-0 h-1/3 bg-danger-500/90 rounded-l"
+                      className="absolute inset-y-0 left-0 bg-rose-500"
                       style={{ width: `${Math.min(100, pCrit)}%` }}
                     />
                     <div
-                      className="absolute bottom-1/3 left-0 h-1/3 bg-warning-500/90"
-                      style={{ width: `${Math.min(100, pHigh)}%` }}
+                      className="absolute inset-y-0 left-0 bg-amber-500"
+                      style={{ width: `${Math.min(100, pHigh)}%`, left: `${Math.min(100, pCrit)}%` }}
                     />
                     <div
-                      className="absolute top-0 left-0 h-1/3 bg-[#eab308]/90 rounded-tl"
-                      style={{ width: `${Math.min(100, pMed)}%` }}
+                      className="absolute inset-y-0 left-0 bg-yellow-500"
+                      style={{ width: `${Math.min(100, pMed)}%`, left: `${Math.min(100, pCrit + pHigh)}%` }}
                     />
                   </div>
                 </div>
@@ -416,36 +377,32 @@ export default function Reports() {
         )}
       </section>
 
-      {/* Individual reports list */}
-      <section className="card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* Individual Reports Grid */}
+      <section className="p-4 rounded-[var(--radius-lg)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
+        <div className="flex items-center justify-between mb-3.5">
           <div>
-            <div className="label-title mb-1">Detalles</div>
-            <h2 className="font-display font-bold text-[20px] text-surface-900 leading-tight">
-              Reportes individuales
+            <h2 className="font-display font-bold text-base text-white">
+              Reportes Individuales de Auditoría
             </h2>
-            <div className="text-[12px] text-surface-500 mt-0.5">
-              Cada reporte es exportable en sus formatos disponibles y mantiene la precisión de filtros y fecha.
+            <div className="text-xs text-[var(--studio-text-secondary)] mt-0.5">
+              Exportación individual en JSON, SARIF 2.1 y HTML standalone.
             </div>
           </div>
-          <span className="chip chip-blue">
-            {entries.length} reporte{entries.length === 1 ? "" : "s"}
+          <span className="studio-badge">
+            {entries.length} disponibles
           </span>
         </div>
 
         {entries.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-surface-50 border border-surface-200 grid place-items-center text-surface-400 mb-3">
-              <FileWarning size={24} />
+          <div className="py-10 text-center">
+            <div className="mx-auto w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] grid place-items-center text-slate-500 mb-2">
+              <FileWarning size={18} />
             </div>
-            <div className="font-display font-bold text-surface-800 text-lg mb-1">
-              Sin reportes disponibles
+            <div className="text-xs text-slate-400 mb-3">
+              No hay reportes que coincidan con la búsqueda.
             </div>
-            <div className="text-[13px] text-surface-500 mb-4">
-              Realiza análisis con las opciones "incluir SARIF / HTML" desde la configuración.
-            </div>
-            <button className="btn-primary" onClick={() => nav("/")}>
-              Ir a Inicio
+            <button className="studio-btn-secondary" onClick={() => nav("/")}>
+              Realizar un análisis
             </button>
           </div>
         ) : (
@@ -453,115 +410,87 @@ export default function Reports() {
             {entries.map((h) => (
               <article
                 key={h.id}
-                className="rounded-2xl p-4 border border-surface-200 bg-white hover:shadow-card transition-all hover:-translate-y-0.5"
+                className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-surface)] hover:border-[var(--studio-border-bright)] transition-colors flex flex-col justify-between"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 shrink-0">
-                    <FileCode size={18} />
+                <div>
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileCode size={16} className="text-blue-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs font-semibold text-slate-100 truncate">
+                          {h.target}
+                        </div>
+                        <div className="text-[10px] text-[var(--studio-text-faint)] font-mono truncate">
+                          {h.id}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {h.result.sarif && (
+                        <span className="studio-badge !text-[10px] text-blue-400">SARIF</span>
+                      )}
+                      {h.result.html_report && (
+                        <span className="studio-badge !text-[10px] text-purple-400">HTML</span>
+                      )}
+                      <span className="studio-badge !text-[10px]">JSON</span>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-display font-bold text-[15px] text-surface-900 truncate">
-                      {h.target}
+
+                  {/* Severities counter */}
+                  <div className="grid grid-cols-5 gap-1 text-center font-mono text-[10px] my-2.5">
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-rose-900/30 p-1 text-rose-400">
+                      <div className="font-bold text-xs">{h.summary.critical || 0}</div>
+                      <div>Crit</div>
                     </div>
-                    <div className="text-[11px] text-surface-500 font-mono truncate mt-0.5">
-                      ID {h.id}
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-amber-900/30 p-1 text-amber-400">
+                      <div className="font-bold text-xs">{h.summary.high || 0}</div>
+                      <div>Alto</div>
                     </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-yellow-900/30 p-1 text-yellow-400">
+                      <div className="font-bold text-xs">{h.summary.medium || 0}</div>
+                      <div>Med</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-emerald-900/30 p-1 text-emerald-400">
+                      <div className="font-bold text-xs">{h.summary.low || 0}</div>
+                      <div>Bajo</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-[var(--studio-border)] p-1 text-slate-400">
+                      <div className="font-bold text-xs">{h.summary.info || 0}</div>
+                      <div>Info</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2.5 border-t border-[var(--studio-border)] flex items-center justify-between gap-2">
+                  <div className="text-[10px] text-[var(--studio-text-secondary)] font-mono">
+                    <span>{formatDateTime(h.created_at, { seconds: true })}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    {h.result.sarif ? (
-                      <span className="chip chip-green !py-0.5 text-[10px]">SARIF</span>
-                    ) : null}
-                    {h.result.html_report ? (
-                      <span className="chip chip-purple !py-0.5 text-[10px]">HTML</span>
-                    ) : null}
-                    <span className="chip chip-blue !py-0.5 text-[10px]">JSON</span>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-5 gap-1.5 text-center text-[11px]">
-                  <div className="rounded-lg bg-danger-50 border border-danger-100 py-1.5">
-                    <div className="font-bold text-danger-700 text-[13px]">{h.summary.critical || 0}</div>
-                    <div className="text-danger-600 font-bold">C</div>
-                  </div>
-                  <div className="rounded-lg bg-warning-50 border border-warning-100 py-1.5">
-                    <div className="font-bold text-warning-700 text-[13px]">{h.summary.high || 0}</div>
-                    <div className="text-warning-600 font-bold">A</div>
-                  </div>
-                  <div className="rounded-lg bg-[#fef9c3] border border-[#fde68a] py-1.5">
-                    <div className="font-bold text-[#854d0e] text-[13px]">{h.summary.medium || 0}</div>
-                    <div className="text-[#a16207] font-bold">M</div>
-                  </div>
-                  <div className="rounded-lg bg-success-50 border border-success-100 py-1.5">
-                    <div className="font-bold text-success-700 text-[13px]">{h.summary.low || 0}</div>
-                    <div className="text-success-600 font-bold">B</div>
-                  </div>
-                  <div className="rounded-lg bg-primary-50 border border-primary-100 py-1.5">
-                    <div className="font-bold text-primary-700 text-[13px]">{h.summary.info || 0}</div>
-                    <div className="text-primary-600 font-bold">I</div>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-surface-100 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[11px] text-surface-500 leading-tight">
-                    <div>
-                      <span className="text-surface-700 font-semibold">
-                        {formatDateTime(h.created_at, { seconds: true })}
-                      </span>
-                    </div>
-                    <div className="mt-0.5">{formatRelative(h.created_at)}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
                     <button
                       title="Exportar JSON"
                       onClick={() => exportEntry(h.id, "json")}
-                      className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
+                      className="studio-btn-secondary !py-1 !px-2 text-xs"
                     >
-                      <FileJson size={13} />
+                      <FileJson size={12} />
                     </button>
                     <button
                       title="Exportar SARIF"
                       onClick={() => exportEntry(h.id, "sarif")}
                       disabled={!h.result.sarif}
-                      className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
+                      className="studio-btn-secondary !py-1 !px-2 text-xs disabled:opacity-30"
                     >
-                      <FileText size={13} />
+                      <FileText size={12} />
                     </button>
                     <button
                       title="Exportar HTML"
                       onClick={() => exportEntry(h.id, "html")}
                       disabled={!h.result.html_report}
-                      className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
+                      className="studio-btn-secondary !py-1 !px-2 text-xs disabled:opacity-30"
                     >
-                      <FileImage size={13} />
+                      <FileImage size={12} />
                     </button>
                   </div>
                 </div>
-                {/* Filtros aplicados precisos */}
-                {h.result.filters_applied && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {typeof h.result.filters_applied.min_confidence === "number" && (
-                      <span className="chip chip-gray !py-0.5 text-[10px]">
-                        conf ≥ {Math.round(h.result.filters_applied.min_confidence * 100)}%
-                      </span>
-                    )}
-                    {h.result.filters_applied.min_severity && (
-                      <span className="chip chip-amber !py-0.5 text-[10px]">
-                        sev ≥ {h.result.filters_applied.min_severity}
-                      </span>
-                    )}
-                    <span
-                      className={`chip !py-0.5 text-[10px] ${
-                        h.result.filters_applied.exclude_tests ? "chip-blue" : "chip-green"
-                      }`}
-                    >
-                      tests: {h.result.filters_applied.exclude_tests ? "excluidos" : "incluidos"}
-                    </span>
-                    {h.result.filters_applied.include_sarif && (
-                      <span className="chip chip-green !py-0.5 text-[10px]">sarif incluido</span>
-                    )}
-                    {h.result.filters_applied.include_html && (
-                      <span className="chip chip-purple !py-0.5 text-[10px]">html incluido</span>
-                    )}
-                  </div>
-                )}
               </article>
             ))}
           </div>

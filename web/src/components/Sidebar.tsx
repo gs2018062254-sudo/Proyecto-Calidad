@@ -7,95 +7,91 @@ import {
   FileBarChart,
   History,
   Settings,
-  ShieldCheck,
-  ChevronRight,
-  User,
+  Terminal,
+  Activity,
+  UserCheck,
+  Info,
 } from "lucide-react";
 
 const NAV = [
-  { to: "/", end: true, label: "Inicio", icon: Home },
-  { to: "/analysis", label: "Análisis", icon: Code2 },
-  { to: "/rules", label: "Reglas", icon: BookOpen },
-  { to: "/reports", label: "Reportes", icon: FileBarChart },
-  { to: "/history", label: "Historial", icon: History },
+  { to: "/", end: true, label: "Consola de análisis", icon: Home },
+  { to: "/analysis", label: "Editor de código", icon: Code2 },
+  { to: "/rules", label: "Reglas de seguridad", icon: BookOpen },
+  { to: "/reports", label: "Reportes SARIF", icon: FileBarChart },
+  { to: "/history", label: "Registro de auditorías", icon: History },
   { to: "/settings", label: "Configuración", icon: Settings },
+  { to: "/about", label: "Especificación técnica", icon: Info },
 ];
 
 export default function Sidebar() {
   return (
-    <aside className="hidden md:flex w-[250px] shrink-0 flex-col h-screen sticky top-0 border-r border-surface-200 bg-white">
-      <div className="px-5 pt-6 pb-5 border-b border-surface-100">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 grid place-items-center text-white shadow-pop">
-            <Shield size={22} strokeWidth={2.4} />
+    <aside className="hidden md:flex w-[250px] shrink-0 flex-col h-screen sticky top-0 border-r border-[var(--studio-border)] bg-[var(--studio-panel)] text-[var(--studio-text)] select-none">
+      {/* Brand header */}
+      <div className="px-5 py-4 border-b border-[var(--studio-border)]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border-bright)] grid place-items-center text-blue-400">
+            <Shield size={18} strokeWidth={2.2} />
           </div>
-          <div className="leading-tight">
-            <div className="font-display font-bold text-[16px] tracking-tight text-surface-900">
-              Analizador de Vulnerabilidades
+          <div>
+            <div className="font-display font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+              SAST Studio
             </div>
-            <div className="text-[11px] text-surface-500 leading-tight">
-              Código más seguro,<br />proyectos más fuertes.
+            <div className="text-[11px] text-[var(--studio-text-secondary)] font-normal">
+              Análisis Estático Python
             </div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div className="px-2 pb-2 text-[11px] text-[var(--studio-text-faint)] font-medium">
+          Módulos
+        </div>
         {NAV.map(({ to, end, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              `nav-item ${isActive ? "nav-item-active" : ""}`
+              `studio-nav-item ${isActive ? "active" : ""}`
             }
           >
-            <Icon size={18} strokeWidth={2} />
-            <span>{label}</span>
+            <Icon size={16} strokeWidth={2} className="shrink-0 text-[var(--studio-text-secondary)]" />
+            <span className="truncate">{label}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="p-3 space-y-3 border-t border-surface-100">
-        <div className="relative p-4 rounded-2xl overflow-hidden"
-             style={{
-               background:
-                 "linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #8b5cf6 100%)",
-             }}
-        >
-          <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-30"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)",
-            }}
-          />
-          <div className="relative">
-            <div className="w-8 h-8 rounded-xl bg-white/15 grid place-items-center backdrop-blur mb-2">
-              <ShieldCheck size={16} className="text-white" />
-            </div>
-            <div className="font-display font-bold text-white text-[14px] leading-tight">
-              Tu código, más seguro
-            </div>
-            <div className="text-[11px] text-white/80 mt-1 leading-snug">
-              Detecta riesgos antes de que sea tarde.
-            </div>
+      {/* Telemetry Footer */}
+      <div className="p-3 border-t border-[var(--studio-border)] bg-[var(--studio-bg)]/60 space-y-2.5">
+        <div className="p-2.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-surface)]">
+          <div className="flex items-center justify-between text-[11px] font-mono mb-1">
+            <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+              <Terminal size={12} /> Motor AST
+            </span>
+            <span className="text-emerald-400 flex items-center gap-1 text-[10px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              En línea
+            </span>
+          </div>
+          <div className="text-[11px] text-[var(--studio-text-secondary)]">
+            8 reglas activas · Taint flow
           </div>
         </div>
 
-        <button className="nav-item w-full">
-          <div className="w-8 h-8 rounded-full bg-surface-100 grid place-items-center">
-            <User size={16} className="text-surface-600" />
+        {/* Auditor Profile */}
+        <div className="flex items-center gap-2 px-2 py-1 text-xs text-[var(--studio-text-secondary)]">
+          <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] grid place-items-center text-slate-300">
+            <UserCheck size={13} />
           </div>
-          <div className="flex-1 text-left leading-tight">
-            <div className="text-[13px] font-semibold text-surface-800">Invitado</div>
-            <div className="flex items-center gap-1 text-[11px] text-surface-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
-              Online
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-medium text-slate-200 truncate">Sesión local</div>
+            <div className="text-[10px] text-[var(--studio-text-faint)] truncate flex items-center gap-1">
+              <Activity size={10} className="text-emerald-400" /> Flask MVC
             </div>
           </div>
-          <ChevronRight size={14} className="text-surface-400" />
-        </button>
+        </div>
       </div>
     </aside>
   );

@@ -7,27 +7,19 @@ import {
   Clock,
   FileCode,
   Trash2,
-  FileJson,
-  FileText,
-  FileImage,
-  FolderOpen,
-  ShieldCheck,
-  TrendingDown,
-  TrendingUp,
   RefreshCw,
   PlayCircle,
-  X as XIcon,
 } from "lucide-react";
 import { formatDateTime, formatRelative, parseDate } from "../lib/datetime";
 import { useNavigate } from "react-router-dom";
 
-const SEV_STYLE: Record<string, string> = {
-  critical: "chip-red",
-  high: "chip-amber",
-  medium: "chip-amber",
-  low: "chip-green",
-  info: "chip-blue",
-  all: "chip-gray",
+const SEV_CLASS: Record<string, string> = {
+  critical: "studio-sev-critical",
+  high: "studio-sev-high",
+  medium: "studio-sev-medium",
+  low: "studio-sev-low",
+  info: "studio-sev-info",
+  all: "",
 };
 
 const SEV_LABEL: Record<string, string> = {
@@ -45,7 +37,6 @@ export default function History() {
   const deleteEntry = useSastStore((s) => s.deleteHistoryEntry);
   const clearHistory = useSastStore((s) => s.clearHistory);
   const loadResult = useSastStore((s) => s.loadHistoryResult);
-  const exportEntry = useSastStore((s) => s.exportHistoryEntry);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,369 +101,256 @@ export default function History() {
   const [confirmClear, setConfirmClear] = useState(false);
 
   return (
-    <div className="max-w-[1500px] mx-auto space-y-6 animate-fade-up">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="label-title mb-2">Historial · en vivo</div>
-          <h1 className="section-title">Todos los análisis</h1>
-          <p className="mt-2 text-[15px] text-surface-500 max-w-2xl leading-relaxed">
-            Se actualiza en tiempo real en todas las pestañas y dispositivos mediante BroadcastChannel.
-            Cada entrada contiene el resumen, los filtros aplicados y el resultado completo descargable.
+    <div className="max-w-[1400px] mx-auto space-y-6">
+      {/* Console Header */}
+      <section className="studio-console-header">
+        <div className="studio-title-group">
+          <h1>Registro de Auditorías y Escaneos Realizados</h1>
+          <p>
+            Historial persistido localmente y sincronizado en tiempo real entre pestañas.
+            Permite inspección forense de resultados previos, reapertura y exportación en JSON/SARIF/HTML.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`chip chip-green ${history.length ? "" : "opacity-60"}`}>
-            <HistoryIcon size={12} /> {history.length} registros
+          <span className="studio-badge text-emerald-400">
+            <HistoryIcon size={12} /> {history.length} sesiones guardadas
           </span>
-          <span className="chip chip-blue inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse" />
-            Live
-          </span>
-          <button className="btn-secondary" onClick={() => loadFromStorage()}>
-            <RefreshCw size={14} /> Refrescar
+          <button className="studio-btn-secondary" onClick={() => loadFromStorage()}>
+            <RefreshCw size={13} /> Sincronizar
           </button>
           <button
-            className="btn-secondary text-danger-600 border-danger-200 hover:bg-danger-50"
+            className="studio-btn-secondary text-rose-400 hover:text-rose-300"
             onClick={() => setConfirmClear(true)}
             disabled={history.length === 0}
           >
-            <Trash2 size={14} /> Limpiar
+            <Trash2 size={13} /> Limpiar historial
           </button>
         </div>
-      </header>
+      </section>
 
-      {/* Stats summary */}
-      <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="stat-card bg-white border-surface-200">
-          <div className="text-[12px] font-semibold text-surface-500">Análisis</div>
-          <div className="font-display font-bold text-2xl mt-1 text-surface-900">{filtered.length}</div>
+      {/* Top Metrics Strip */}
+      <section className="grid grid-cols-2 md:grid-cols-6 gap-2.5">
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-[var(--studio-text-secondary)]">Total filtrado</div>
+          <div className="font-display font-bold text-2xl text-white mt-1 tabular-nums">
+            {filtered.length}
+          </div>
         </div>
-        <div className="stat-card bg-white border-danger-100">
-          <div className="text-[12px] font-semibold text-danger-600">Críticos</div>
-          <div className="font-display font-bold text-2xl mt-1 text-danger-700">{totals.c}</div>
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-rose-900/30 bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-rose-400">Críticos</div>
+          <div className="font-display font-bold text-2xl text-rose-400 mt-1 tabular-nums">
+            {totals.c}
+          </div>
         </div>
-        <div className="stat-card bg-white border-warning-100">
-          <div className="text-[12px] font-semibold text-warning-600">Altos</div>
-          <div className="font-display font-bold text-2xl mt-1 text-warning-700">{totals.h}</div>
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-amber-900/30 bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-amber-400">Altos</div>
+          <div className="font-display font-bold text-2xl text-amber-400 mt-1 tabular-nums">
+            {totals.h}
+          </div>
         </div>
-        <div className="stat-card bg-white border-[#fde68a]">
-          <div className="text-[12px] font-semibold text-[#b45309]">Medios</div>
-          <div className="font-display font-bold text-2xl mt-1 text-[#92400e]">{totals.m}</div>
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-yellow-900/30 bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-yellow-400">Medios</div>
+          <div className="font-display font-bold text-2xl text-yellow-400 mt-1 tabular-nums">
+            {totals.m}
+          </div>
         </div>
-        <div className="stat-card bg-white border-success-100">
-          <div className="text-[12px] font-semibold text-success-700">Bajos + Info</div>
-          <div className="font-display font-bold text-2xl mt-1 text-success-700">
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-emerald-900/30 bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-emerald-400">Bajos e info</div>
+          <div className="font-display font-bold text-2xl text-emerald-400 mt-1 tabular-nums">
             {totals.l + totals.i}
           </div>
         </div>
-        <div className="stat-card bg-white border-primary-100">
-          <div className="text-[12px] font-semibold text-primary-700">Tiempo medio</div>
-          <div className="font-display font-bold text-2xl mt-1 text-primary-700">
+        <div className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)]">
+          <div className="text-[11px] font-mono text-blue-400">Tiempo medio</div>
+          <div className="font-display font-bold text-2xl text-blue-400 mt-1 tabular-nums">
             {totals.avgMs < 1000 ? `${totals.avgMs} ms` : `${(totals.avgMs / 1000).toFixed(2)} s`}
           </div>
         </div>
       </section>
 
-      {/* Filters */}
-      <section className="card p-4 flex flex-wrap items-end gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
+      {/* Filter Bar */}
+      <section className="p-3.5 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nombre, ID o severidades..."
-            className="input-field pl-10"
+            placeholder="Filtrar por archivo, objetivo o regla..."
+            className="w-full studio-input !pl-9"
           />
         </div>
+
         <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">Modo</label>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as "all" | "paste" | "files")}
-            className="input-field !py-2"
-          >
-            <option value="all">Todos</option>
-            <option value="paste">Pegar código</option>
-            <option value="files">Subir archivos</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">
-            Severidad mínima
-          </label>
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value as Severity | "all")}
-            className="input-field !py-2"
+            className="studio-select"
           >
-            <option value="all">Todos</option>
-            <option value="info">Info+</option>
-            <option value="low">Bajo+</option>
-            <option value="medium">Medio+</option>
-            <option value="high">Alto+</option>
-            <option value="critical">Solo críticos</option>
+            <option value="all">Cualquier severidad</option>
+            <option value="critical">Crítico únicamente</option>
+            <option value="high">Alto o superior</option>
+            <option value="medium">Medio o superior</option>
+            <option value="low">Bajo o superior</option>
           </select>
         </div>
+
         <div>
-          <label className="text-[12px] font-semibold text-surface-600 block mb-1.5">
-            Rango tiempo
-          </label>
           <select
-            value={String(sinceHours)}
-            onChange={(e) =>
-              setSinceHours(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-            className="input-field !py-2"
+            value={sinceHours}
+            onChange={(e) => setSinceHours(e.target.value === "all" ? "all" : Number(e.target.value))}
+            className="studio-select"
           >
-            <option value="all">Todo el tiempo</option>
-            <option value="1">Última hora</option>
-            <option value="6">Últimas 6 h</option>
-            <option value="24">Últimas 24 h</option>
-            <option value="168">Últimos 7 días</option>
+            <option value="all">Cualquier fecha</option>
+            <option value={1}>Última hora</option>
+            <option value={24}>Últimas 24 horas</option>
+            <option value={168}>Últimos 7 días</option>
           </select>
         </div>
-        <label className="inline-flex items-center gap-2 cursor-pointer select-none px-2">
+
+        <div>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as "all" | "paste" | "files")}
+            className="studio-select"
+          >
+            <option value="all">Cualquier origen</option>
+            <option value="paste">Código pegado</option>
+            <option value="files">Archivos subidos</option>
+          </select>
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--studio-text-secondary)] select-none">
           <input
             type="checkbox"
             checked={onlyWithVulns}
             onChange={(e) => setOnlyWithVulns(e.target.checked)}
-            className="w-4 h-4 accent-primary-600"
+            className="accent-blue-500 rounded"
           />
-          <span className="text-[13px] font-semibold text-surface-700">Con vulnerabilidades</span>
+          <span>Solo con vulnerabilidades</span>
         </label>
-        <div className="ml-auto flex items-center gap-1 bg-surface-50 rounded-xl border border-surface-200 p-1">
+
+        {/* View mode switcher */}
+        <div className="ml-auto studio-tab-group">
           <button
             onClick={() => setView("table")}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition ${
-              view === "table"
-                ? "bg-white text-primary-700 shadow-soft"
-                : "text-surface-500 hover:text-surface-800"
-            }`}
+            className={`studio-tab-btn ${view === "table" ? "active" : ""}`}
           >
             Tabla
           </button>
           <button
             onClick={() => setView("list")}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition ${
-              view === "list"
-                ? "bg-white text-primary-700 shadow-soft"
-                : "text-surface-500 hover:text-surface-800"
-            }`}
+            className={`studio-tab-btn ${view === "list" ? "active" : ""}`}
           >
-            Lista
+            Fichas
           </button>
         </div>
       </section>
 
       {/* Table view */}
       {view === "table" && (
-        <section className="card overflow-hidden">
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="min-w-full text-sm">
+        <section className="studio-panel">
+          <div className="overflow-x-auto">
+            <table className="studio-table">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200">
-                  <th className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Fecha / Hora
-                  </th>
-                  <th className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Objetivo
-                  </th>
-                  <th className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Modo
-                  </th>
-                  <th className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Archivos
-                  </th>
-                  <th className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Severidad máx
-                  </th>
-                  <th className="text-right px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    C / A / M / B / I
-                  </th>
-                  <th className="text-right px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Duración
-                  </th>
-                  <th className="text-right px-5 py-3 text-[11px] uppercase tracking-wider text-surface-500 font-bold">
-                    Acciones
-                  </th>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Objetivo</th>
+                  <th>Modo</th>
+                  <th>Archivos</th>
+                  <th>Severidad máx.</th>
+                  <th className="text-right">C / A / M / B / I</th>
+                  <th className="text-right">Duración</th>
+                  <th className="text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-14 text-center">
-                      <div className="mx-auto w-14 h-14 rounded-2xl bg-surface-50 border border-surface-200 grid place-items-center text-surface-400 mb-3">
-                        <HistoryIcon size={24} />
-                      </div>
-                      <div className="font-display font-bold text-surface-800 text-lg">
-                        Sin registros que mostrar
-                      </div>
-                      <div className="mt-1 text-[13px] text-surface-500">
-                        Ajusta los filtros o ejecuta un nuevo análisis en Inicio.
-                      </div>
+                    <td colSpan={8} className="py-12 text-center text-[var(--studio-text-secondary)]">
+                      <HistoryIcon size={20} className="mx-auto mb-2 text-slate-500" />
+                      <div className="font-semibold text-white">Sin registros de auditoría</div>
+                      <div className="text-xs mt-0.5">Ajusta los filtros o ejecuta un nuevo análisis.</div>
                       <button
-                        className="btn-primary mt-5"
+                        className="studio-btn-primary mt-3 text-xs"
                         onClick={() => navigate("/")}
                       >
-                        <PlayCircle size={14} fill="currentColor" /> Ir a analizar
+                        <PlayCircle size={13} fill="currentColor" /> Ir a la consola de análisis
                       </button>
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((h) => (
-                    <tr
-                      key={h.id}
-                      className="border-b border-surface-100 last:border-none hover:bg-surface-50/60 transition-colors"
-                    >
-                      <td className="px-5 py-3 align-top">
-                        <div className="text-[13px] font-semibold text-surface-800">
-                          {formatDateTime(h.created_at, { seconds: true })}
-                        </div>
-                        <div className="text-[11px] text-surface-500 mt-0.5 inline-flex items-center gap-1">
-                          <Clock size={11} /> {formatRelative(h.created_at)}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 shrink-0">
-                            <FileCode size={14} />
+                  filtered.map((h) => {
+                    const sevMax = (h.severity_max as string) || "info";
+                    return (
+                      <tr key={h.id}>
+                        <td className="font-mono text-xs whitespace-nowrap">
+                          <div className="text-slate-200">
+                            {formatDateTime(h.created_at, { seconds: true })}
                           </div>
-                          <div className="min-w-0">
-                            <div
-                              className="text-[13px] font-semibold text-surface-800 truncate max-w-[260px]"
-                              title={h.target}
+                          <div className="text-[10px] text-[var(--studio-text-faint)] flex items-center gap-1 mt-0.5">
+                            <Clock size={9} /> {formatRelative(h.created_at)}
+                          </div>
+                        </td>
+                        <td className="font-mono text-xs">
+                          <div className="flex items-center gap-2">
+                            <FileCode size={14} className="text-blue-400 shrink-0" />
+                            <div>
+                              <div className="text-slate-100 font-semibold truncate max-w-[220px]" title={h.target}>
+                                {h.target}
+                              </div>
+                              <div className="text-[10px] text-[var(--studio-text-faint)] font-mono">
+                                {h.id}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="studio-badge !text-[10px]">
+                            {h.mode === "paste" ? "Código" : "Archivos"}
+                          </span>
+                        </td>
+                        <td className="font-mono text-xs">
+                          {h.files} arch.
+                        </td>
+                        <td>
+                          <span className={`studio-badge ${SEV_CLASS[sevMax] || "studio-sev-info"} !text-[10px]`}>
+                            {SEV_LABEL[sevMax] || "—"}
+                          </span>
+                        </td>
+                        <td className="text-right font-mono text-xs">
+                          <span className="text-rose-400 font-bold">{h.summary.critical || 0}</span> /{" "}
+                          <span className="text-amber-400 font-bold">{h.summary.high || 0}</span> /{" "}
+                          <span className="text-yellow-400 font-bold">{h.summary.medium || 0}</span> /{" "}
+                          <span className="text-emerald-400">{h.summary.low || 0}</span> /{" "}
+                          <span className="text-slate-400">{h.summary.info || 0}</span>
+                        </td>
+                        <td className="text-right font-mono text-xs text-[var(--studio-text-secondary)]">
+                          {h.duration_ms < 1000 ? `${h.duration_ms} ms` : `${(h.duration_ms / 1000).toFixed(2)} s`}
+                        </td>
+                        <td className="text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              className="studio-btn-secondary !py-0.5 !px-2 text-xs"
+                              onClick={() => {
+                                loadResult(h.id);
+                                navigate("/");
+                              }}
+                              title="Cargar resultados en la consola principal"
                             >
-                              {h.target}
-                            </div>
-                            <div className="text-[11px] text-surface-500 font-mono truncate max-w-[260px]">
-                              ID {h.id}
-                            </div>
+                              Ver
+                            </button>
+                            <button
+                              className="studio-btn-secondary !py-0.5 !px-1.5 text-xs text-rose-400 hover:text-rose-300"
+                              onClick={() => deleteEntry(h.id)}
+                              title="Eliminar entrada"
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        {h.mode === "paste" ? (
-                          <span className="chip chip-blue">Pegar</span>
-                        ) : (
-                          <span className="chip chip-purple">Archivos</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        <div className="text-[13px] font-semibold text-surface-800">
-                          {h.files}
-                        </div>
-                        <div className="text-[11px] text-surface-500">archivos analizados</div>
-                      </td>
-                      <td className="px-5 py-3 align-top">
-                        <span className={`chip ${SEV_STYLE[h.severity_max as string] || "chip-gray"}`}>
-                          {SEV_LABEL[h.severity_max as string] || "—"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 align-top text-right">
-                        <div className="inline-flex flex-wrap justify-end items-center gap-1.5 font-mono text-[12px] font-semibold">
-                          <span className="px-1.5 py-0.5 rounded bg-danger-50 text-danger-700 border border-danger-100">
-                            {h.summary.critical || 0}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-warning-50 text-warning-700 border border-warning-100">
-                            {h.summary.high || 0}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-[#fef9c3] text-[#854d0e] border border-[#fde68a]">
-                            {h.summary.medium || 0}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-success-50 text-success-700 border border-success-100">
-                            {h.summary.low || 0}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-100">
-                            {h.summary.info || 0}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-surface-500 mt-1 inline-flex items-center gap-1">
-                          {h.severity_count === 0 ? (
-                            <>
-                              <ShieldCheck size={11} className="text-success-600" /> 0 fallos · limpio
-                            </>
-                          ) : h.severity_count <= 3 ? (
-                            <>
-                              <TrendingDown size={11} className="text-success-600" /> {h.severity_count} total
-                            </>
-                          ) : (
-                            <>
-                              <TrendingUp size={11} className="text-danger-600" /> {h.severity_count} total
-                            </>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 align-top text-right">
-                        <div className="text-[13px] font-semibold text-surface-800">
-                          {h.duration_ms < 1000
-                            ? `${h.duration_ms} ms`
-                            : `${(h.duration_ms / 1000).toFixed(2)} s`}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 align-top text-right">
-                        <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
-                          <button
-                            className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
-                            title="Cargar resultado"
-                            onClick={() => {
-                              loadResult(h.id);
-                              navigate("/");
-                            }}
-                          >
-                            <PlayCircle size={13} /> Cargar
-                          </button>
-                          <button
-                            className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
-                            title="Exportar JSON"
-                            onClick={() => exportEntry(h.id, "json")}
-                          >
-                            <FileJson size={13} />
-                          </button>
-                          <button
-                            className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
-                            title="Exportar SARIF"
-                            onClick={() => exportEntry(h.id, "sarif")}
-                            disabled={!h.result.sarif}
-                          >
-                            <FileText size={13} />
-                          </button>
-                          <button
-                            className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
-                            title="Exportar HTML"
-                            onClick={() => exportEntry(h.id, "html")}
-                            disabled={!h.result.html_report}
-                          >
-                            <FileImage size={13} />
-                          </button>
-                          <button
-                            className="btn-secondary !py-1.5 !px-2.5 text-[12px] text-danger-600 hover:bg-danger-50 border-danger-200"
-                            title="Eliminar"
-                            onClick={() => deleteEntry(h.id)}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-end gap-1.5 flex-wrap">
-                          {h.result.filters_applied?.exclude_tests === false && (
-                            <span className="chip chip-blue !py-0.5 !text-[10px] !px-2">
-                              <FolderOpen size={10} /> incluye tests
-                            </span>
-                          )}
-                          {h.result.filters_applied?.min_severity && (
-                            <span className="chip chip-amber !py-0.5 !text-[10px] !px-2">
-                              ≥ {SEV_LABEL[h.result.filters_applied.min_severity as string] || h.result.filters_applied.min_severity}
-                            </span>
-                          )}
-                          {typeof h.result.filters_applied?.min_confidence === "number" &&
-                            h.result.filters_applied.min_confidence > 0 && (
-                              <span className="chip chip-gray !py-0.5 !text-[10px] !px-2">
-                                conf ≥ {Math.round(h.result.filters_applied.min_confidence * 100)}%
-                              </span>
-                            )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -482,187 +360,125 @@ export default function History() {
 
       {/* List view */}
       {view === "list" && (
-        <section className="grid md:grid-cols-2 gap-4">
+        <section className="grid md:grid-cols-2 gap-3">
           {filtered.length === 0 ? (
-            <div className="md:col-span-2 card p-12 text-center">
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-surface-50 border border-surface-200 grid place-items-center text-surface-400 mb-3">
-                <HistoryIcon size={24} />
-              </div>
-              <div className="font-display font-bold text-surface-800 text-lg">
-                Sin registros que mostrar
-              </div>
-              <div className="mt-1 text-[13px] text-surface-500">
-                Ajusta los filtros o ejecuta un nuevo análisis.
-              </div>
+            <div className="md:col-span-2 p-12 text-center text-[var(--studio-text-secondary)] studio-panel">
+              <HistoryIcon size={20} className="mx-auto mb-2 text-slate-500" />
+              <div className="font-semibold text-white">Sin registros de auditoría</div>
             </div>
           ) : (
-            filtered.map((h) => (
-              <article key={h.id} className="card p-5 card-hover">
-                <header className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 shrink-0">
-                      <FileCode size={18} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-display font-bold text-[15px] text-surface-900 truncate">
-                        {h.target}
-                      </div>
-                      <div className="text-[11px] text-surface-500 flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span>{formatDateTime(h.created_at, { seconds: true })}</span>
-                        <span>·</span>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock size={11} /> {formatRelative(h.created_at)}
-                        </span>
-                        <span>·</span>
-                        {h.mode === "paste" ? (
-                          <span className="chip chip-blue !py-0.5">Pegar</span>
-                        ) : (
-                          <span className="chip chip-purple !py-0.5">Archivos</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`chip ${SEV_STYLE[h.severity_max as string] || "chip-gray"} shrink-0`}>
-                    {SEV_LABEL[h.severity_max as string] || "—"}
-                  </span>
-                </header>
+            filtered.map((h) => {
+              const sevMax = (h.severity_max as string) || "info";
+              const ok = h.severity_count === 0;
 
-                <div className="mt-4 grid grid-cols-5 gap-1.5 text-center">
-                  <div className="rounded-xl bg-danger-50 border border-danger-100 py-2">
-                    <div className="text-[10px] font-bold uppercase text-danger-600 tracking-wide">
-                      Crit
+              return (
+                <article
+                  key={h.id}
+                  className="p-4 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] hover:border-[var(--studio-border-bright)] transition-colors flex flex-col justify-between"
+                >
+                  <header className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] grid place-items-center text-blue-400 shrink-0">
+                        <FileCode size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs font-semibold text-slate-100 truncate">
+                          {h.target}
+                        </div>
+                        <div className="text-[10px] text-[var(--studio-text-secondary)] font-mono flex items-center gap-1.5 mt-0.5">
+                          <span>{formatDateTime(h.created_at, { seconds: true })}</span>
+                          <span>·</span>
+                          <span>{formatRelative(h.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="font-display font-bold text-danger-700 text-lg">
-                      {h.summary.critical || 0}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-warning-50 border border-warning-100 py-2">
-                    <div className="text-[10px] font-bold uppercase text-warning-600 tracking-wide">
-                      Alto
-                    </div>
-                    <div className="font-display font-bold text-warning-700 text-lg">
-                      {h.summary.high || 0}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-[#fef9c3] border border-[#fde68a] py-2">
-                    <div className="text-[10px] font-bold uppercase text-[#92400e] tracking-wide">
-                      Med
-                    </div>
-                    <div className="font-display font-bold text-[#854d0e] text-lg">
-                      {h.summary.medium || 0}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-success-50 border border-success-100 py-2">
-                    <div className="text-[10px] font-bold uppercase text-success-700 tracking-wide">
-                      Bajo
-                    </div>
-                    <div className="font-display font-bold text-success-700 text-lg">
-                      {h.summary.low || 0}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-primary-50 border border-primary-100 py-2">
-                    <div className="text-[10px] font-bold uppercase text-primary-700 tracking-wide">
-                      Info
-                    </div>
-                    <div className="font-display font-bold text-primary-700 text-lg">
-                      {h.summary.info || 0}
-                    </div>
-                  </div>
-                </div>
+                    <span className={`studio-badge ${SEV_CLASS[sevMax] || "studio-sev-info"} !text-[10px]`}>
+                      {SEV_LABEL[sevMax] || "—"}
+                    </span>
+                  </header>
 
-                <footer className="mt-4 pt-4 border-t border-surface-100 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[12px] text-surface-500">
-                    <b className="text-surface-700">{h.files}</b> archivos ·{" "}
-                    <b className="text-surface-700">
-                      {h.duration_ms < 1000 ? `${h.duration_ms} ms` : `${(h.duration_ms / 1000).toFixed(2)} s`}
-                    </b>{" "}
-                    · <b className="text-surface-700">{h.severity_count}</b> total
+                  {/* Summary row */}
+                  <div className="grid grid-cols-5 gap-1 text-center font-mono text-[10px] my-3">
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-rose-900/30 p-1 text-rose-400">
+                      <div className="font-bold text-xs">{h.summary.critical || 0}</div>
+                      <div>Crit</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-amber-900/30 p-1 text-amber-400">
+                      <div className="font-bold text-xs">{h.summary.high || 0}</div>
+                      <div>Alto</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-yellow-900/30 p-1 text-yellow-400">
+                      <div className="font-bold text-xs">{h.summary.medium || 0}</div>
+                      <div>Med</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-emerald-900/30 p-1 text-emerald-400">
+                      <div className="font-bold text-xs">{h.summary.low || 0}</div>
+                      <div>Bajo</div>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] p-1 text-slate-400">
+                      <div className="font-bold text-xs">{h.summary.info || 0}</div>
+                      <div>Info</div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      className="btn-secondary !py-1.5 !px-2.5 text-[12px]"
-                      onClick={() => {
-                        loadResult(h.id);
-                        navigate("/");
-                      }}
-                    >
-                      <PlayCircle size={13} /> Cargar
-                    </button>
-                    <div className="flex items-center border border-surface-200 rounded-xl overflow-hidden">
+
+                  <footer className="pt-2.5 border-t border-[var(--studio-border)] flex items-center justify-between gap-2">
+                    <div className="text-[11px] text-[var(--studio-text-secondary)] font-mono">
+                      {h.files} archivos · {h.duration_ms} ms · {ok ? "Limpio" : `${h.severity_count} hallazgos`}
+                    </div>
+                    <div className="flex items-center gap-1">
                       <button
-                        title="Exportar JSON"
-                        onClick={() => exportEntry(h.id, "json")}
-                        className="px-2 py-1.5 hover:bg-surface-50 text-surface-600 hover:text-primary-700 border-r border-surface-200"
+                        className="studio-btn-secondary !py-1 !px-2 text-xs"
+                        onClick={() => {
+                          loadResult(h.id);
+                          navigate("/");
+                        }}
                       >
-                        <FileJson size={13} />
+                        Abrir
                       </button>
                       <button
-                        title="Exportar SARIF"
-                        onClick={() => exportEntry(h.id, "sarif")}
-                        disabled={!h.result.sarif}
-                        className="px-2 py-1.5 hover:bg-surface-50 text-surface-600 hover:text-primary-700 border-r border-surface-200 disabled:opacity-40"
+                        className="studio-btn-secondary !py-1 !px-1.5 text-xs text-rose-400 hover:text-rose-300"
+                        onClick={() => deleteEntry(h.id)}
                       >
-                        <FileText size={13} />
-                      </button>
-                      <button
-                        title="Exportar HTML"
-                        onClick={() => exportEntry(h.id, "html")}
-                        disabled={!h.result.html_report}
-                        className="px-2 py-1.5 hover:bg-surface-50 text-surface-600 hover:text-primary-700 disabled:opacity-40"
-                      >
-                        <FileImage size={13} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
-                    <button
-                      className="btn-secondary !py-1.5 !px-2.5 text-[12px] text-danger-600 hover:bg-danger-50 border-danger-200"
-                      onClick={() => deleteEntry(h.id)}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </footer>
-              </article>
-            ))
+                  </footer>
+                </article>
+              );
+            })
           )}
         </section>
       )}
 
+      {/* Confirmation Modal */}
       {confirmClear && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm grid place-items-center p-4 animate-fade-up">
-          <div className="card max-w-md w-full p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-2xl bg-danger-50 border border-danger-200 grid place-items-center text-danger-600 shrink-0">
-                <Trash2 size={20} />
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4">
+          <div className="p-5 rounded-[var(--radius-md)] border border-rose-900/50 bg-[#0c1019] max-w-md w-full shadow-2xl space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-rose-950/60 border border-rose-800/60 grid place-items-center text-rose-400 shrink-0">
+                <Trash2 size={16} />
               </div>
               <div className="flex-1">
-                <h3 className="font-display font-bold text-[17px] text-surface-900 leading-tight">
-                  Borrar todo el historial
+                <h3 className="font-display font-bold text-base text-white">
+                  Vaciar registro histórico
                 </h3>
-                <p className="mt-1 text-[13px] text-surface-500">
-                  Esta acción no se puede deshacer. Se eliminarán{" "}
-                  <b className="text-surface-800">{history.length}</b> registros de tu equipo.
+                <p className="text-xs text-slate-300 mt-1">
+                  Se eliminarán permanentemente los <b className="text-white font-mono">{history.length}</b> registros de auditoría locales.
                 </p>
               </div>
-              <button
-                onClick={() => setConfirmClear(false)}
-                className="w-8 h-8 rounded-lg grid place-items-center text-surface-400 hover:bg-surface-50 hover:text-surface-700"
-              >
-                <XIcon size={16} />
-              </button>
             </div>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button className="btn-secondary" onClick={() => setConfirmClear(false)}>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--studio-border)]">
+              <button className="studio-btn-secondary text-xs" onClick={() => setConfirmClear(false)}>
                 Cancelar
               </button>
               <button
-                className="btn-primary"
-                style={{ background: "linear-gradient(135deg, #dc2626, #991b1b)", boxShadow: "0 10px 24px -10px rgba(220,38,38,0.5)" }}
+                className="studio-btn-primary !bg-rose-600 hover:!bg-rose-700 text-xs"
                 onClick={() => {
                   clearHistory();
                   setConfirmClear(false);
                 }}
               >
-                <Trash2 size={14} /> Sí, eliminar todo
+                Eliminar todo
               </button>
             </div>
           </div>

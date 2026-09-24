@@ -146,6 +146,8 @@ class TaintAnalyzer:
 
     def analyze_file(self, parsed: ParsedFile) -> Dict[str, List[TaintFlow]]:
         """Analiza un archivo buscando flujos tainted hacia diferentes sinks."""
+        if parsed.tree is None:
+            return defaultdict(list)
         taint_map = self._build_taint_map(parsed)
         results: Dict[str, List[TaintFlow]] = defaultdict(list)
 
@@ -176,58 +178,33 @@ class TaintAnalyzer:
         """Construye un mapa de variables tainted: nombre_var → [(linea, source_func, path)]."""
         taint_map: Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]] = defaultdict(list)
 
-        for func_name, call_node, line in parsed.function_calls:
-            matched_source = self._match_source(func_name)
-            if matched_source:
-                for parent in ast.walk(parsed.tree):
-                    if isinstance(parent, (ast.Assign, ast.AnnAssign)):
-                        targets = []
-                        value = None
-                        if isinstance(parent, ast.Assign):
-                            targets = parent.targets
-                            value = parent.value
-                        elif isinstance(parent, ast.AnnAssign):
-                            targets = [parent.target] if parent.target else []
-                            value = parent.value
-                        if value is call_node or (isinstance(value, ast.Call) and value is call_node):
-                            for t in targets:
-                                if isinstance(t, ast.Name):
-                                    taint_map[t.id].append((line, matched_source, [(line, t.id)]))
-                                elif isinstance(t, (ast.Tuple, ast.List)):
-                                    for i, elt in enumerate(t.elts):
-                                        if isinstance(elt, ast.Name):
-                                            taint_map[elt.id].append((line, matched_source, [(line, elt.id)]))
+        # 1. Mapear nodos de llamada que coinciden con fuentes de entrada
+        source_calls: Dict[int, str] = {}
+        for func_name, call_node, _ in parsed.function_calls:
+            matched = self._match_source(func_name)
+            if matched:
+                source_calls[id(call_node)] = matched
 
+        # 2. Identificar asignaciones iniciales que reciben datos de esas fuentes
+        for var_name, assign_list in parsed.assignments.items():
+            for line, value_node in assign_list:
+                matched_source = None
+                if id(value_node) in source_calls:
+                    matched_source = source_calls[id(value_node)]
+                else:
+                    for child in ast.walk(value_node):
+                        if id(child) in source_calls:
+                            matched_source = source_calls[id(child)]
+                            break
+                if matched_source:
+                    taint_map[var_name].append((line, matched_source, [(line, var_name)]))
+
+        # 3. Propagación iterativa eficiente sobre las asignaciones del archivo
         changed = True
         iterations = 0
-        while changed and iterations < 10:
+        while changed and iterations < 5:
             changed = False
             iterations += 1
-            for func_name, call_node, line in parsed.function_calls:
-                for parent in ast.walk(parsed.tree):
-                    if isinstance(parent, (ast.Assign, ast.AnnAssign)):
-                        targets = []
-                        value = None
-                        if isinstance(parent, ast.Assign):
-                            targets = parent.targets
-                            value = parent.value
-                        elif isinstance(parent, ast.AnnAssign):
-                            targets = [parent.target] if parent.target else []
-                            value = parent.value
-                        if value is not None:
-                            tainted_names, source_func, path = self._node_is_tainted(value, taint_map)
-                            if tainted_names:
-                                for t in targets:
-                                    if isinstance(t, ast.Name):
-                                        already = any(
-                                            existing_line <= line
-                                            for existing_line, _, _ in taint_map.get(t.id, [])
-                                        )
-                                        if not already:
-                                            new_path = path + [(line, t.id)]
-                                            taint_map[t.id].append((line, source_func, new_path))
-                                            changed = True
-
             for var_name, assignments in parsed.assignments.items():
                 for line, value in assignments:
                     tainted_names, source_func, path = self._node_is_tainted(value, taint_map)
@@ -239,6 +216,7 @@ class TaintAnalyzer:
                         if not already:
                             new_path = path + [(line, var_name)]
                             taint_map[var_name].append((line, source_func, new_path))
+                            changed = True
 
         return taint_map
 

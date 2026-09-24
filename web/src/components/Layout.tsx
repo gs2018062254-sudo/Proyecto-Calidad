@@ -12,23 +12,22 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-50 text-surface-800">
+    <div className="min-h-screen bg-[var(--studio-bg)] text-[var(--studio-text)]">
       <div className="flex">
         <Sidebar />
         <div className="flex-1 min-w-0 flex flex-col">
           <Topbar />
-          <main className="flex-1 px-6 md:px-8 py-6 md:py-8">
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
             <Outlet />
           </main>
-          <footer className="px-6 md:px-8 py-6 border-t border-surface-200 text-[12px] text-surface-500 flex flex-col md:flex-row items-center justify-between gap-3">
+          <footer className="px-6 py-4 border-t border-[var(--studio-border)] bg-[var(--studio-panel)] text-xs text-[var(--studio-text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-2.5">
             <div>
-              © {new Date().getFullYear()} Analizador de Vulnerabilidades ·
-              Hecho con Python + React · Versión 0.1.0
+              Plataforma de Análisis Estático de Vulnerabilidades · Python AST & Taint Flow Engine
             </div>
-            <div className="flex items-center gap-4">
-              <span className="chip chip-gray">8 reglas</span>
-              <span className="chip chip-green">Estático · AST + Taint</span>
-              <span className="chip chip-blue">SARIF · JSON · HTML</span>
+            <div className="flex items-center gap-4 text-[var(--studio-text-faint)] font-mono text-[11px]">
+              <span>Motor Flask MVC (5001)</span>
+              <span>SARIF 2.1 Standard</span>
+              <span>8 Reglas CWE/OWASP</span>
             </div>
           </footer>
         </div>

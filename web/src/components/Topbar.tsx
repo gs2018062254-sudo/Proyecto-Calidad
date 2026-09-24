@@ -1,30 +1,41 @@
-import { Search, Bell } from "lucide-react";
+import { Activity, Terminal } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Topbar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-surface-200 bg-white/80 backdrop-blur-md">
-      <div className="px-6 md:px-8 h-16 flex items-center gap-4">
-        <div className="relative flex-1 max-w-2xl">
-          <Search
-            size={16}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400"
-          />
-          <input
-            type="text"
-            placeholder="Buscar por archivo, regla o vulnerabilidad..."
-            className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm bg-surface-50 border border-surface-200 text-surface-800 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-300 focus:bg-white transition-all"
-          />
+    <header className="sticky top-0 z-40 border-b border-[var(--studio-border)] bg-[var(--studio-panel)]/95 backdrop-blur-md">
+      <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+        {/* Scope / Engine title */}
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] grid place-items-center text-blue-400 shrink-0">
+            <Terminal size={15} strokeWidth={2} />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display font-bold text-sm tracking-tight text-white">
+              SAST Studio
+            </span>
+            <span className="text-[var(--studio-text-faint)] hidden sm:inline">/</span>
+            <span className="text-xs text-[var(--studio-text-secondary)] hidden sm:inline font-mono">
+              Consola de análisis estático
+            </span>
+          </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <button className="relative w-10 h-10 rounded-xl bg-surface-50 border border-surface-200 grid place-items-center text-surface-600 hover:bg-surface-100 hover:text-surface-900 transition-colors">
-            <Bell size={18} strokeWidth={2} />
-            <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-danger-500 ring-2 ring-white" />
-          </button>
-
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary-200 to-info-200 border border-surface-200 grid place-items-center text-primary-700 font-bold text-sm">
-            U
+        {/* Live Backend Telemetry & Quick Action */}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] text-xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-300">Puerto 5001</span>
+            <span className="text-emerald-400">Activo</span>
           </div>
+
+          <Link
+            to="/rules"
+            className="studio-btn-secondary !text-xs !py-1 !px-2.5 inline-flex items-center gap-1.5"
+          >
+            <Activity size={13} className="text-blue-400" />
+            <span>8 reglas</span>
+          </Link>
         </div>
       </div>
     </header>

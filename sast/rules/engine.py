@@ -30,21 +30,35 @@ DEFAULT_RULES: List[Type[BaseRule]] = [
     InsecureHashPasswordRule,
 ]
 
-PYTHON_EXTENSIONS = {".py", ".pyw"}
+SUPPORTED_EXTENSIONS = {
+    ".py", ".pyw",
+    ".js", ".jsx", ".mjs", ".cjs",
+    ".ts", ".tsx",
+    ".html", ".htm", ".vue", ".svelte",
+    ".php", ".phtml",
+    ".java", ".kt",
+    ".go",
+    ".rb",
+    ".c", ".cpp", ".cc", ".h", ".hpp", ".cs",
+    ".sql",
+    ".sh", ".bash", ".ps1",
+    ".json", ".yml", ".yaml", ".xml", ".toml",
+}
+PYTHON_EXTENSIONS = SUPPORTED_EXTENSIONS  # Compatibilidad hacia atrás
 
 
 @dataclass
 class AnalyzerConfig:
     excluded_dirs: List[str] = field(default_factory=lambda: [
         "__pycache__", ".git", ".svn", ".hg", "venv", "env", ".venv",
-        ".env", "node_modules", "dist", "build", ".tox", ".eggs",
-        "*.egg-info", ".pytest_cache", ".mypy_cache",
+        "node_modules", "dist", "build", ".tox", ".eggs",
+        "*.egg-info", ".pytest_cache", ".mypy_cache", ".next", "coverage",
     ])
     excluded_extensions: List[str] = field(default_factory=lambda: [
-        ".pyc", ".pyo", ".pyd", ".so", ".dll", ".exe", ".bin",
+        ".pyc", ".pyo", ".pyd", ".so", ".dll", ".exe", ".bin", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".lock",
     ])
     excluded_files: List[str] = field(default_factory=lambda: [
-        "setup.py", "conftest.py", "__init__.py",
+        "setup.py", "conftest.py", "__init__.py", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
     ])
     excluded_patterns: List[str] = field(default_factory=lambda: [
         "test_*.py", "*_test.py", "tests/**", "migrations/**",
@@ -55,7 +69,7 @@ class AnalyzerConfig:
 
 
 class AnalyzerEngine:
-    """Motor principal del analizador SAST."""
+    """Motor principal del analizador SAST multilingüe."""
 
     def __init__(
         self,
@@ -76,7 +90,7 @@ class AnalyzerEngine:
                 continue
 
     def scan(self, target: str) -> ScanResult:
-        """Escanea un archivo o directorio."""
+        """Escanea un archivo o directorio multilingüe."""
         result = ScanResult(target=target)
         files = self._collect_files(target)
         result.files_scanned = 0
@@ -103,7 +117,7 @@ class AnalyzerEngine:
         return result
 
     def scan_file(self, file_path: str) -> Optional[List[Finding]]:
-        """Escanea un único archivo."""
+        """Escanea un único archivo de cualquier lenguaje soportado."""
         p = Path(file_path)
         if not p.exists() or not p.is_file():
             return None
@@ -114,7 +128,7 @@ class AnalyzerEngine:
                 return None
 
         lang = detect_language(file_path)
-        if lang != "python":
+        if not lang:
             return None
 
         parsed = self.parser.parse_file(file_path)
@@ -150,10 +164,13 @@ class AnalyzerEngine:
         return all_findings
 
     def _collect_files(self, target: str) -> List[str]:
-        """Recolecta archivos Python de un target (archivo o directorio)."""
+        """Recolecta archivos de código de un target (archivo o directorio)."""
         path = Path(target)
         if path.is_file():
-            return [str(path)] if path.suffix.lower() in PYTHON_EXTENSIONS else []
+            ext = path.suffix.lower()
+            name = path.name.lower()
+            is_env = name == ".env" or name.startswith(".env.")
+            return [str(path)] if (ext in SUPPORTED_EXTENSIONS or is_env) else []
 
         if not path.is_dir():
             return []
@@ -167,9 +184,10 @@ class AnalyzerEngine:
             for fname in files:
                 full = os.path.join(root, fname)
                 ext = Path(fname).suffix.lower()
+                is_env = fname.lower() == ".env" or fname.lower().startswith(".env.")
                 if ext in excluded_exts:
                     continue
-                if ext not in PYTHON_EXTENSIONS:
+                if ext not in SUPPORTED_EXTENSIONS and not is_env:
                     continue
                 if self._should_exclude_file(full, fname, path):
                     continue

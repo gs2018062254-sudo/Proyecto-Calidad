@@ -1,11 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&family=Syne:wght@600;700;800&display=swap");
+@import "./studio.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
@@ -16,150 +17,22 @@ body,
 
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: "Inter", system-ui, sans-serif;
+  background: var(--studio-bg);
+  color: var(--studio-text);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
 @layer utilities {
-  .card {
-    @apply bg-white border border-surface-200 rounded-2xl shadow-soft;
+  .font-display {
+    font-family: var(--font-display);
   }
-  .card-hover {
-    @apply transition-all duration-200 hover:shadow-card hover:-translate-y-0.5;
+  .font-body {
+    font-family: var(--font-body);
   }
-
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 select-none;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    color: #ffffff;
-    box-shadow: 0 8px 24px -10px rgba(37, 99, 235, 0.55);
-  }
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 32px -12px rgba(37, 99, 235, 0.65);
-  }
-  .btn-primary:disabled {
-    opacity: 0.55;
-    transform: none;
-    cursor: not-allowed;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 select-none;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    color: #334155;
-  }
-  .btn-secondary:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #0f172a;
-  }
-
-  .chip {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border;
-  }
-  .chip-blue {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border-color: #dbeafe;
-  }
-  .chip-green {
-    background: #ecfdf5;
-    color: #047857;
-    border-color: #d1fae5;
-  }
-  .chip-purple {
-    background: #f5f3ff;
-    color: #7c3aed;
-    border-color: #ede9fe;
-  }
-  .chip-gray {
-    background: #f8fafc;
-    color: #475569;
-    border-color: #e2e8f0;
-  }
-  .chip-red {
-    background: #fef2f2;
-    color: #dc2626;
-    border-color: #fee2e2;
-  }
-  .chip-amber {
-    background: #fffbeb;
-    color: #b45309;
-    border-color: #fef3c7;
-  }
-
-  .nav-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all;
-    color: #475569;
-  }
-  .nav-item:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-  .nav-item-active {
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-weight: 600;
-  }
-  .nav-item-active svg {
-    color: #1d4ed8;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-2.5 rounded-xl text-sm border border-surface-200 bg-white text-surface-800 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all;
-  }
-
-  .stat-card {
-    @apply rounded-2xl p-5 border shadow-soft transition-all duration-300;
-  }
-  .stat-card:hover {
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 30px 50px -24px rgba(15, 23, 42, 0.15);
-    transform: translateY(-2px);
-  }
-
-  .section-title {
-    @apply font-display font-bold text-[28px] leading-tight text-surface-900;
-  }
-
-  .label-title {
-    @apply text-[11px] font-bold uppercase tracking-widest text-surface-500;
-  }
-
-  .gradient-blue-text {
-    background: linear-gradient(120deg, #2563eb 0%, #3b82f6 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-
-  .tag-pill {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wide;
-  }
-
-  .code-line {
-    font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
-    font-size: 13px;
-    line-height: 1.65;
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }

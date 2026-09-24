@@ -8,7 +8,7 @@ export default function Dropzone() {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const addFiles = useSastStore((s) => s.addNativeFiles);
-  const files = useSastStore((s) => s.files);
+  const files = useSastStore((s) => s.nativeFiles);
   const removeFile = useSastStore((s) => s.removeFile);
   const clearFiles = useSastStore((s) => s.clearFiles);
 
@@ -25,11 +25,11 @@ export default function Dropzone() {
     <div className="flex flex-col gap-3">
       <div
         className={clsx(
-          "relative cursor-pointer select-none rounded-2xl border-2 border-dashed transition-all",
-          "p-8 md:p-10 text-center overflow-hidden bg-white",
+          "relative cursor-pointer select-none rounded-[var(--radius-md)] border border-dashed transition-all",
+          "p-8 text-center overflow-hidden bg-[var(--studio-panel)]",
           dragging
-            ? "border-primary-500 bg-primary-50/60 shadow-card"
-            : "border-surface-200 hover:border-primary-300 hover:bg-surface-50",
+            ? "border-blue-500 bg-blue-950/30"
+            : "border-[var(--studio-border)] hover:border-[var(--studio-border-bright)] hover:bg-[var(--studio-surface)]",
         )}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -55,63 +55,64 @@ export default function Dropzone() {
           type="file"
           className="hidden"
           multiple
-          accept=".py,.pyw"
+          accept=".py,.pyw,.js,.jsx,.ts,.tsx,.php,.java,.go,.cs,.cpp,.c,.rb,.rs,.sql"
           onChange={(e) => onFiles(e.target.files)}
         />
 
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary-50 border border-primary-100 grid place-items-center text-primary-700 mb-4 shadow-soft">
-          <CloudUpload size={30} strokeWidth={1.8} />
+        <div className="mx-auto w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] grid place-items-center text-blue-400 mb-2">
+          <CloudUpload size={20} strokeWidth={1.8} />
         </div>
-        <div className="font-display font-semibold text-surface-900 text-lg">
-          Arrastra tu archivo aquí
+        <div className="font-display font-semibold text-white text-sm">
+          Arrastra tus archivos de código aquí
         </div>
-        <div className="text-sm text-surface-500 mt-1.5">
-          o haz clic para{" "}
-          <span className="text-primary-700 font-semibold">seleccionar archivo</span>
+        <div className="text-xs text-[var(--studio-text-secondary)] mt-1">
+          o haz clic para seleccionar de tu equipo
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="chip chip-blue">.py</span>
-          <span className="chip chip-purple">.pyw</span>
-          <span className="chip chip-gray">≤ 5 MB</span>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+          <span className="studio-badge">Python · JS / TS · PHP · Java · Go</span>
+          <span className="studio-badge">Hasta 5 MB</span>
         </div>
       </div>
 
       {files.length > 0 && (
-        <div className="card p-4 space-y-2">
+        <div className="p-3 rounded-[var(--radius-md)] border border-[var(--studio-border)] bg-[var(--studio-panel)] space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-[13px] font-semibold text-surface-700">
-              Archivos ({files.length})
+            <div className="text-xs font-semibold text-slate-200">
+              Archivos en cola ({files.length})
             </div>
             <button
-              className="text-[12px] text-surface-500 hover:text-danger-600 transition-colors font-semibold"
+              className="text-[11px] text-[var(--studio-text-secondary)] hover:text-rose-400 transition-colors font-mono"
               onClick={clearFiles}
             >
-              Limpiar
+              Limpiar todos
             </button>
           </div>
-          <div className="grid gap-2 max-h-56 overflow-auto scrollbar-thin pr-1">
+          <div className="grid gap-1.5 max-h-56 overflow-auto pr-1">
             {files.map((f, i) => (
               <div
                 key={i}
-                className="group flex items-center gap-3 rounded-xl border border-surface-200 bg-white px-3 py-2 hover:border-primary-200 hover:bg-primary-50/40 transition"
+                className="group flex items-center gap-2.5 rounded-[var(--radius-sm)] border border-[var(--studio-border)] bg-[var(--studio-surface)] px-2.5 py-1.5 hover:border-[var(--studio-border-bright)] transition"
               >
                 <FileCode
-                  size={16}
-                  className="shrink-0 text-primary-600"
+                  size={14}
+                  className="shrink-0 text-blue-400"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] text-surface-800 font-semibold">
+                  <div className="truncate text-xs text-slate-200 font-mono">
                     {f.name}
                   </div>
-                  <div className="text-[11px] text-surface-500">
+                  <div className="text-[10px] text-[var(--studio-text-faint)] font-mono">
                     {formatBytes(f.size)}
                   </div>
                 </div>
                 <button
-                  className="text-surface-400 hover:text-danger-600 transition opacity-0 group-hover:opacity-100"
-                  onClick={() => removeFile(f.name)}
+                  className="text-slate-500 hover:text-rose-400 transition opacity-0 group-hover:opacity-100 p-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(f.name);
+                  }}
                 >
-                  <X size={14} />
+                  <X size={13} />
                 </button>
               </div>
             ))}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from typing import List
 
 from .base import BaseRule
@@ -39,7 +40,33 @@ class SQLInjectionRule(BaseRule):
             findings.append(finding)
 
         findings.extend(self._check_string_concat_sql(parsed))
+        findings.extend(self._check_multilang_sql(parsed))
 
+        return findings
+
+    def _check_multilang_sql(self, parsed: ParsedFile) -> List[Finding]:
+        """Detecta concatenación de consultas SQL dinámicas en JS, TS, PHP, Java, etc."""
+        findings: List[Finding] = []
+        sql_patterns = [
+            re.compile(r"""(?i)\b(?:query|execute|raw|select)\s*\(\s*["'].*?(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER).*?["']\s*(?:\+|\.|\$)\s*[a-zA-Z_]"""),
+            re.compile(r"""(?i)\b(?:query|execute|raw)\s*\(\s*`.*?(?:SELECT|INSERT|UPDATE|DELETE).*?\$\{.*?}`"""),
+        ]
+        for line_num, line in enumerate(parsed.lines, start=1):
+            trimmed = line.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            for pat in sql_patterns:
+                m = pat.search(line)
+                if m:
+                    finding = self._make_finding(
+                        parsed=parsed,
+                        line=line_num,
+                        column=m.start() + 1,
+                        confidence=0.85,
+                    )
+                    finding.description = "Consulta SQL construida mediante concatenación o interpolación dinámica de variables, vulnerable a Inyección SQL."
+                    findings.append(finding)
+                    break
         return findings
 
     def _calculate_confidence(self, flow: TaintFlow) -> float:
@@ -171,6 +198,40 @@ class CommandInjectionRule(BaseRule):
             findings.append(finding)
 
         findings.extend(self._check_shell_true(parsed))
+        findings.extend(self._check_multilang_cmd(parsed))
+        return findings
+
+    def _check_multilang_cmd(self, parsed: ParsedFile) -> List[Finding]:
+        """Detecta ejecución de comandos dinámicos en JS/TS, PHP, etc."""
+        findings: List[Finding] = []
+        patterns = [
+            re.compile(r"""\bchild_process\.(?:exec|execSync)\s*\(\s*["'].*?["']\s*\+"""),
+            re.compile(r"""\bchild_process\.(?:exec|execSync)\s*\(\s*`.*?\$\{.*?}`"""),
+            re.compile(r"""\b(?:system|passthru|shell_exec)\s*\(\s*["'].*?["']\s*\."""),
+        ]
+        for line_num, line in enumerate(parsed.lines, start=1):
+            trimmed = line.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            for pat in patterns:
+                m = pat.search(line)
+                if m:
+                    from ..models.finding import Severity
+                    finding = Finding(
+                        rule_id=self.rule_id,
+                        title=self.title,
+                        severity=Severity.CRITICAL,
+                        file_path=parsed.file_path,
+                        line=line_num,
+                        description="Ejecución de comandos del sistema operativo construida con variables dinámicas.",
+                        cwe=self.cwe,
+                        owasp=self.owasp,
+                        confidence=0.88,
+                        evidence=parsed.get_line(line_num),
+                        recommendation=self.recommendation,
+                    )
+                    findings.append(finding)
+                    break
         return findings
 
     def _calculate_confidence(self, flow: TaintFlow) -> float:
@@ -254,6 +315,39 @@ class PathTraversalRule(BaseRule):
             )
             findings.append(finding)
 
+        findings.extend(self._check_multilang_path(parsed))
+        return findings
+
+    def _check_multilang_path(self, parsed: ParsedFile) -> List[Finding]:
+        """Detecta acceso a archivos con entrada dinámica en Node.js, PHP, etc."""
+        findings: List[Finding] = []
+        patterns = [
+            re.compile(r"""\bfs\.(?:readFile|readFileSync|createReadStream)\s*\(\s*(?:req\.(?:query|params|body)|path\.join\([^)]*req\.)"""),
+            re.compile(r"""\bres\.sendFile\s*\(\s*(?:req\.(?:query|params|body)|path\.join\([^)]*req\.)"""),
+            re.compile(r"""\b(?:include|require|file_get_contents)\s*\(\s*\$_(?:GET|POST|REQUEST)"""),
+        ]
+        for line_num, line in enumerate(parsed.lines, start=1):
+            trimmed = line.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            for pat in patterns:
+                if pat.search(line):
+                    from ..models.finding import Severity
+                    finding = Finding(
+                        rule_id=self.rule_id,
+                        title=self.title,
+                        severity=Severity.HIGH,
+                        file_path=parsed.file_path,
+                        line=line_num,
+                        description="Operación de lectura de archivo dependiente directamente de parámetros de petición no sanitizados.",
+                        cwe=self.cwe,
+                        owasp=self.owasp,
+                        confidence=0.85,
+                        evidence=parsed.get_line(line_num),
+                        recommendation=self.recommendation,
+                    )
+                    findings.append(finding)
+                    break
         return findings
 
     def _calculate_confidence(self, flow: TaintFlow) -> float:
@@ -264,7 +358,7 @@ class PathTraversalRule(BaseRule):
 
 
 class XSSRule(BaseRule):
-    """Detecta Cross-Site Scripting reflejado."""
+    """Detecta Cross-Site Scripting reflejado en Python, JS/TS, React, Vue, PHP, etc."""
 
     rule_id = "XSS"
     title = "Cross-Site Scripting (XSS)"
@@ -309,6 +403,41 @@ class XSSRule(BaseRule):
             )
             findings.append(finding)
 
+        findings.extend(self._check_multilang_xss(parsed))
+        return findings
+
+    def _check_multilang_xss(self, parsed: ParsedFile) -> List[Finding]:
+        """Detecta vectores de XSS en React, Vue, JS, PHP, etc."""
+        findings: List[Finding] = []
+        patterns = [
+            (re.compile(r"""dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html\s*:"""), "Uso de dangerouslySetInnerHTML en React: si el contenido proviene de entrada del usuario puede provocar XSS."),
+            (re.compile(r"""\b(?:innerHTML|outerHTML)\s*=\s*"""), "Asignación directa a innerHTML/outerHTML sin sanitización previa."),
+            (re.compile(r"""\bdocument\.write(?:ln)?\s*\("""), "Uso de document.write(): vector común de XSS en aplicaciones web."),
+            (re.compile(r"""v-html\s*=\s*["'][^"']+["']"""), "Directiva v-html en Vue: puede provocar XSS si el valor no está sanitizado."),
+            (re.compile(r"""\b(?:echo|print)\s+\$_(?:GET|POST|REQUEST)\["""), "Impresión directa de parámetros HTTP en PHP sin escape HTML."),
+        ]
+        for line_num, line in enumerate(parsed.lines, start=1):
+            trimmed = line.strip()
+            if trimmed.startswith("//") or trimmed.startswith("#") or trimmed.startswith("/*") or trimmed.startswith("*"):
+                continue
+            for pat, desc in patterns:
+                if pat.search(line):
+                    from ..models.finding import Severity
+                    finding = Finding(
+                        rule_id=self.rule_id,
+                        title=self.title,
+                        severity=Severity.HIGH,
+                        file_path=parsed.file_path,
+                        line=line_num,
+                        description=desc,
+                        cwe=self.cwe,
+                        owasp=self.owasp,
+                        confidence=0.85,
+                        evidence=parsed.get_line(line_num),
+                        recommendation=self.recommendation,
+                    )
+                    findings.append(finding)
+                    break
         return findings
 
     def _calculate_confidence(self, flow: TaintFlow) -> float:

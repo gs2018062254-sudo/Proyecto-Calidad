@@ -141,6 +141,40 @@ class TaintAnalyzer:
         "make_response": [0],
     }
 
+    SSRF_SINKS: Dict[str, List[int]] = {
+        "requests.get": [0],
+        "requests.post": [0],
+        "requests.put": [0],
+        "requests.delete": [0],
+        "requests.patch": [0],
+        "requests.head": [0],
+        "requests.request": [1],
+        "urllib.request.urlopen": [0],
+        "urllib.urlopen": [0],
+        "urlopen": [0],
+        "httpx.get": [0],
+        "httpx.post": [0],
+        "aiohttp.ClientSession.get": [0],
+    }
+
+    TAINT_SANITIZERS: Dict[str, List[str]] = {
+        "int": ["*"],
+        "float": ["*"],
+        "bool": ["*"],
+        "uuid.UUID": ["*"],
+        "html.escape": ["xss"],
+        "markupsafe.escape": ["xss"],
+        "cgi.escape": ["xss"],
+        "bleach.clean": ["xss"],
+        "shlex.quote": ["command"],
+        "pipes.quote": ["command"],
+        "os.path.basename": ["path"],
+        "werkzeug.utils.secure_filename": ["path"],
+        "secure_filename": ["path"],
+        "urllib.parse.quote": ["xss", "ssrf"],
+        "urllib.parse.quote_plus": ["xss", "ssrf"],
+    }
+
     def __init__(self):
         self.parser = PythonParser()
 
@@ -148,35 +182,55 @@ class TaintAnalyzer:
         """Analiza un archivo buscando flujos tainted hacia diferentes sinks."""
         if parsed.tree is None:
             return defaultdict(list)
-        taint_map = self._build_taint_map(parsed)
+        taint_map, sanitized_map = self._build_taint_map(parsed)
         results: Dict[str, List[TaintFlow]] = defaultdict(list)
 
+        sink_categories = [
+            ("sql", self.SQL_SINKS),
+            ("command", self.COMMAND_SINKS),
+            ("path", self.PATH_SINKS),
+            ("xss", self.XSS_SINKS),
+            ("ssrf", self.SSRF_SINKS),
+        ]
+
         for func_name, call_node, line in parsed.function_calls:
-            matched_sink, arg_indices = self._match_sink(func_name, self.SQL_SINKS)
-            if matched_sink:
-                flows = self._check_sink_taint(parsed, call_node, line, func_name, arg_indices, taint_map)
-                results["sql"].extend(flows)
-
-            matched_sink, arg_indices = self._match_sink(func_name, self.COMMAND_SINKS)
-            if matched_sink:
-                flows = self._check_sink_taint(parsed, call_node, line, func_name, arg_indices, taint_map)
-                results["command"].extend(flows)
-
-            matched_sink, arg_indices = self._match_sink(func_name, self.PATH_SINKS)
-            if matched_sink:
-                flows = self._check_sink_taint(parsed, call_node, line, func_name, arg_indices, taint_map)
-                results["path"].extend(flows)
-
-            matched_sink, arg_indices = self._match_sink(func_name, self.XSS_SINKS)
-            if matched_sink:
-                flows = self._check_sink_taint(parsed, call_node, line, func_name, arg_indices, taint_map)
-                results["xss"].extend(flows)
+            for category, sink_dict in sink_categories:
+                matched_sink, arg_indices = self._match_sink(func_name, sink_dict)
+                if matched_sink:
+                    flows = self._check_sink_taint(
+                        parsed, call_node, line, func_name, arg_indices, taint_map, category, sanitized_map
+                    )
+                    results[category].extend(flows)
 
         return results
 
-    def _build_taint_map(self, parsed: ParsedFile) -> Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]]:
-        """Construye un mapa de variables tainted: nombre_var → [(linea, source_func, path)]."""
+    def _match_sanitizer(self, func_name: str) -> Optional[List[str]]:
+        """Verifica si una llamada a función es un sanitizador conocido y devuelve las categorías que limpia."""
+        if not func_name:
+            return None
+        if func_name in self.TAINT_SANITIZERS:
+            return self.TAINT_SANITIZERS[func_name]
+        for san_name, cats in self.TAINT_SANITIZERS.items():
+            if func_name.endswith("." + san_name) or san_name.endswith("." + func_name):
+                return cats
+        return None
+
+    def _get_node_sanitizer_categories(self, node: ast.AST) -> Set[str]:
+        """Extrae todas las categorías sanitizadas por llamadas envolventes en un nodo AST."""
+        cats: Set[str] = set()
+        if isinstance(node, ast.Call):
+            func_name = self.parser._get_call_name(node.func)
+            matched = self._match_sanitizer(func_name)
+            if matched:
+                cats.update(matched)
+        return cats
+
+    def _build_taint_map(
+        self, parsed: ParsedFile
+    ) -> Tuple[Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]], Dict[str, Set[str]]]:
+        """Construye un mapa de variables tainted y un mapa de categorías sanitizadas por variable."""
         taint_map: Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]] = defaultdict(list)
+        sanitized_map: Dict[str, Set[str]] = defaultdict(set)
 
         # 1. Mapear nodos de llamada que coinciden con fuentes de entrada
         source_calls: Dict[int, str] = {}
@@ -188,6 +242,12 @@ class TaintAnalyzer:
         # 2. Identificar asignaciones iniciales que reciben datos de esas fuentes
         for var_name, assign_list in parsed.assignments.items():
             for line, value_node in assign_list:
+                san_cats = self._get_node_sanitizer_categories(value_node)
+                if "*" in san_cats:
+                    taint_map.pop(var_name, None)
+                    sanitized_map[var_name].add("*")
+                    continue
+
                 matched_source = None
                 if id(value_node) in source_calls:
                     matched_source = source_calls[id(value_node)]
@@ -198,6 +258,8 @@ class TaintAnalyzer:
                             break
                 if matched_source:
                     taint_map[var_name].append((line, matched_source, [(line, var_name)]))
+                    if san_cats:
+                        sanitized_map[var_name].update(san_cats)
 
         # 3. Propagación iterativa eficiente sobre las asignaciones del archivo
         changed = True
@@ -207,8 +269,42 @@ class TaintAnalyzer:
             iterations += 1
             for var_name, assignments in parsed.assignments.items():
                 for line, value in assignments:
+                    san_cats = self._get_node_sanitizer_categories(value)
+                    if "*" in san_cats:
+                        if var_name in taint_map:
+                            taint_map.pop(var_name, None)
+                            changed = True
+                        sanitized_map[var_name].add("*")
+                        continue
+
+                    if san_cats and isinstance(value, ast.Call):
+                        # Si envuelve una variable tainted en un sanitizador específico (ej. safe = html.escape(user))
+                        for arg in value.args:
+                            t_arg, s_func, p_arg = self._node_is_tainted(arg, taint_map)
+                            if t_arg:
+                                sanitized_map[var_name].update(san_cats)
+                                already = any(
+                                    existing_line <= line
+                                    for existing_line, _, _ in taint_map.get(var_name, [])
+                                )
+                                if not already:
+                                    new_path = p_arg + [(line, var_name)]
+                                    taint_map[var_name].append((line, s_func, new_path))
+                                    changed = True
+                        continue
+
                     tainted_names, source_func, path = self._node_is_tainted(value, taint_map)
                     if tainted_names:
+                        # Heredar sanitizaciones si todas las variables involucradas están sanitizadas
+                        referenced_vars = [
+                            n.id for n in ast.walk(value)
+                            if isinstance(n, ast.Name) and n.id in taint_map
+                        ]
+                        if referenced_vars:
+                            common_san = set.intersection(*(sanitized_map.get(v, set()) for v in referenced_vars))
+                            if common_san:
+                                sanitized_map[var_name].update(common_san)
+
                         already = any(
                             existing_line <= line
                             for existing_line, _, _ in taint_map.get(var_name, [])
@@ -218,7 +314,7 @@ class TaintAnalyzer:
                             taint_map[var_name].append((line, source_func, new_path))
                             changed = True
 
-        return taint_map
+        return taint_map, sanitized_map
 
     def _match_source(self, func_name: str) -> Optional[str]:
         """Busca si una llamada a función coincide con un source."""
@@ -239,26 +335,45 @@ class TaintAnalyzer:
         return None, []
 
     def _node_is_tainted(
-        self, node: ast.AST, taint_map: Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]]
+        self,
+        node: ast.AST,
+        taint_map: Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]],
+        sink_category: Optional[str] = None,
+        sanitized_map: Optional[Dict[str, Set[str]]] = None,
     ) -> Tuple[bool, str, List[Tuple[int, str]]]:
-        """Determina si un nodo AST contiene datos tainted."""
+        """Determina si un nodo AST contiene datos tainted no sanitizados para la categoría dada."""
+        if isinstance(node, ast.Call):
+            func_name = self.parser._get_call_name(node.func)
+            san_cats = self._match_sanitizer(func_name)
+            if san_cats:
+                if "*" in san_cats or (sink_category and sink_category in san_cats):
+                    return False, "", []
+
         if isinstance(node, ast.Name):
             if node.id in taint_map and taint_map[node.id]:
+                if sanitized_map and node.id in sanitized_map:
+                    var_san = sanitized_map[node.id]
+                    if "*" in var_san or (sink_category and sink_category in var_san):
+                        return False, "", []
                 _, source_func, path = taint_map[node.id][-1]
                 return True, source_func, path
 
         if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
-            left_tainted, left_src, left_path = self._node_is_tainted(node.left, taint_map)
+            left_tainted, left_src, left_path = self._node_is_tainted(
+                node.left, taint_map, sink_category, sanitized_map
+            )
             if left_tainted:
                 return True, left_src, left_path
-            right_tainted, right_src, right_path = self._node_is_tainted(node.right, taint_map)
+            right_tainted, right_src, right_path = self._node_is_tainted(
+                node.right, taint_map, sink_category, sanitized_map
+            )
             if right_tainted:
                 return True, right_src, right_path
 
         if isinstance(node, ast.JoinedStr):
             for value in node.values:
                 if not isinstance(value, ast.Constant):
-                    t, s, p = self._node_is_tainted(value, taint_map)
+                    t, s, p = self._node_is_tainted(value, taint_map, sink_category, sanitized_map)
                     if t:
                         return True, s, p
 
@@ -268,43 +383,43 @@ class TaintAnalyzer:
                 prop_indices = self.TAINT_PROPAGATORS.get(func_name, ["*"])
                 for i, arg in enumerate(node.args):
                     if "*" in prop_indices or i in prop_indices:
-                        t, s, p = self._node_is_tainted(arg, taint_map)
+                        t, s, p = self._node_is_tainted(arg, taint_map, sink_category, sanitized_map)
                         if t:
                             return True, s, p
                 for kw in node.keywords:
                     if "*" in prop_indices or kw.arg in (str(p) for p in prop_indices if isinstance(p, str)):
-                        t, s, p = self._node_is_tainted(kw.value, taint_map)
+                        t, s, p = self._node_is_tainted(kw.value, taint_map, sink_category, sanitized_map)
                         if t:
                             return True, s, p
                 if isinstance(node.func, ast.Attribute):
-                    t, s, p = self._node_is_tainted(node.func.value, taint_map)
+                    t, s, p = self._node_is_tainted(node.func.value, taint_map, sink_category, sanitized_map)
                     if t:
                         return True, s, p
 
         if isinstance(node, ast.FormattedValue):
-            return self._node_is_tainted(node.value, taint_map)
+            return self._node_is_tainted(node.value, taint_map, sink_category, sanitized_map)
 
         if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
             for elt in node.elts:
-                t, s, p = self._node_is_tainted(elt, taint_map)
+                t, s, p = self._node_is_tainted(elt, taint_map, sink_category, sanitized_map)
                 if t:
                     return True, s, p
 
         if isinstance(node, ast.Dict):
             for v in node.values:
                 if v is not None:
-                    t, s, p = self._node_is_tainted(v, taint_map)
+                    t, s, p = self._node_is_tainted(v, taint_map, sink_category, sanitized_map)
                     if t:
                         return True, s, p
 
         if isinstance(node, ast.Subscript):
-            return self._node_is_tainted(node.value, taint_map)
+            return self._node_is_tainted(node.value, taint_map, sink_category, sanitized_map)
 
         if isinstance(node, ast.Attribute):
-            return self._node_is_tainted(node.value, taint_map)
+            return self._node_is_tainted(node.value, taint_map, sink_category, sanitized_map)
 
         if isinstance(node, (ast.AugAssign,)):
-            return self._node_is_tainted(node.value, taint_map)
+            return self._node_is_tainted(node.value, taint_map, sink_category, sanitized_map)
 
         return False, "", []
 
@@ -316,8 +431,10 @@ class TaintAnalyzer:
         sink_call: str,
         arg_indices: List[int],
         taint_map: Dict[str, List[Tuple[int, str, List[Tuple[int, str]]]]],
+        sink_category: Optional[str] = None,
+        sanitized_map: Optional[Dict[str, Set[str]]] = None,
     ) -> List[TaintFlow]:
-        """Verifica si los argumentos de un sink están tainted."""
+        """Verifica si los argumentos de un sink están tainted y no han sido sanitizados."""
         flows: List[TaintFlow] = []
 
         args_to_check = list(enumerate(call_node.args))
@@ -330,7 +447,9 @@ class TaintAnalyzer:
             args_to_check.append((-1, kw.value))
 
         for arg_idx, arg in args_to_check:
-            is_tainted, source_func, path = self._node_is_tainted(arg, taint_map)
+            is_tainted, source_func, path = self._node_is_tainted(
+                arg, taint_map, sink_category, sanitized_map
+            )
             if is_tainted and path:
                 source_line = path[0][0] if path else sink_line
                 source_var = path[0][1] if path else "unknown"

@@ -1,0 +1,92 @@
+name: Software Quality & SAST CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  backend-tests-and-coverage:
+    name: Pytest & Code Coverage (SAST Engine + MVC API)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run Unit & Integration Tests with Coverage
+        run: |
+          python -m pytest -v --cov=sast --cov=api --cov-report=term-missing --cov-report=xml
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  self-dogfooding-sast:
+    name: Self-Dogfooding SAST Audit (SARIF 2.1.0)
+    runs-on: ubuntu-latest
+    needs: backend-tests-and-coverage
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SAST Engine
+        run: |
+          pip install -r requirements.txt
+
+      - name: Execute SAST CLI on Own Codebase (Dogfooding)
+        run: |
+          python -m sast scan ./api -f sarif -o self-audit.sarif --min-confidence 0.85
+
+      - name: Upload SARIF Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-self-audit-sarif
+          path: self-audit.sarif
+
+  frontend-build:
+    name: Frontend TypeScript & Vite Build (Web Studio)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Typecheck & Build Production SPA
+        run: npm run build

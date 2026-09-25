@@ -37,13 +37,14 @@ def test_rules_endpoint(client):
     data = res.get_json()
     assert data["ok"] is True
     assert "rules" in data
-    assert len(data["rules"]) == 8
+    assert len(data["rules"]) == 12
 
     # Verificar estructura de regla
     first_rule = data["rules"][0]
     assert "id" in first_rule
     assert "title" in first_rule
     assert "severity" in first_rule
+    assert "fix_snippet" in first_rule
 
 
 def test_scan_json_valid_code(client):

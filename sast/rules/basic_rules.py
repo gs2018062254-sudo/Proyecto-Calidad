@@ -17,8 +17,9 @@ class HardcodedSecretRule(BaseRule):
     severity = "high"
     description = "Se detectó una posible credencial o clave secreta escrita directamente en el código fuente."
     cwe = "CWE-798"
-    owasp = "A7:2021-Identification and Authentication Failures"
+    owasp = "A07:2021-Identification and Authentication Failures"
     recommendation = "Almacena secretos en variables de entorno, gestores de secretos (AWS Secrets Manager, HashiCorp Vault) o archivos de configuración fuera del control de versiones."
+    fix_snippet = 'import os\nAPI_SECRET = os.environ.get("API_SECRET")'
 
     SECRET_PATTERNS = [
         (re.compile(r"""(?i)(password|passwd|pwd|secret|token|api_key|apikey|api_secret|private_key|privatekey|access_key|accesskey|auth_token|authtoken)\s*[:=]\s*["'][^"']{4,}["']"""), 0.9),
@@ -106,7 +107,7 @@ class HardcodedSecretRule(BaseRule):
         return False
 
     def _looks_like_secret(self, val: str) -> bool:
-        if len(val) < 32:
+        if len(val) < 32 or any(c.isspace() for c in val):
             return False
         has_upper = any(c.isupper() for c in val)
         has_lower = any(c.islower() for c in val)
@@ -142,6 +143,7 @@ class DangerousFunctionRule(BaseRule):
     cwe = "CWE-676"
     owasp = "A03:2021-Injection"
     recommendation = "Evita usar estas funciones con datos dinámicos. Si son necesarias, valida y sanitiza estrictamente la entrada o usa alternativas seguras."
+    fix_snippet = 'import ast, yaml\nsafe_value = ast.literal_eval(raw_expr)\nsafe_cfg = yaml.safe_load(yaml_content)'
 
     DANGEROUS_CALLS = {
         "eval": ("CWE-95", "critical", 0.85, "eval() ejecuta código dinámico arbitrario. Nunca lo uses con entrada del usuario."),
@@ -156,6 +158,8 @@ class DangerousFunctionRule(BaseRule):
         "shelve.open": ("CWE-502", "high", 0.8, "shelve usa pickle internamente. No abras shelves de fuentes no confiables."),
         "input": ("CWE-20", "info", 0.5, "input() recibe entrada del usuario. Asegúrate de validarla y sanitizarla."),
     }
+
+    SAFE_COMPILE_PREFIXES = ("re.", "regex.", "fnmatch.", "ast.")
 
     # Patrones para lenguajes como JavaScript, TypeScript, PHP, Java, etc.
     MULTI_LANG_PATTERNS = [
@@ -172,11 +176,15 @@ class DangerousFunctionRule(BaseRule):
         # 1. Chequeo AST para archivos Python
         if parsed.tree is not None:
             for func_name, call_node, line in parsed.function_calls:
+                if func_name.startswith(self.SAFE_COMPILE_PREFIXES):
+                    continue
                 matched = None
                 if func_name in self.DANGEROUS_CALLS:
                     matched = self.DANGEROUS_CALLS[func_name]
                 else:
                     for key, val in self.DANGEROUS_CALLS.items():
+                        if key in ("compile", "input", "eval", "exec") and not func_name.startswith("builtins."):
+                            continue
                         if func_name.endswith("." + key):
                             matched = val
                             break

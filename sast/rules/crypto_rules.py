@@ -19,6 +19,7 @@ class WeakCryptographyRule(BaseRule):
     cwe = "CWE-327"
     owasp = "A02:2021-Cryptographic Failures"
     recommendation = "Usa algoritmos modernos y estándares: AES-256-GCM, ChaCha20-Poly1305, RSA-2048+, ECDSA, bcrypt/argon2 para contraseñas. Evita MD5, SHA1, DES, 3DES, RC4."
+    fix_snippet = 'import hashlib, secrets\ndigest = hashlib.sha256(data).hexdigest()\ntoken = secrets.token_urlsafe(32)'
 
     WEAK_HASHES = {
         "md5": ("CWE-327", "high", 0.9, "MD5 es roto criptográficamente. No lo uses para integridad ni seguridad. Usa SHA-256 o superior."),
@@ -89,6 +90,7 @@ class WeakCryptographyRule(BaseRule):
                         confidence=0.88,
                         evidence=parsed.get_line(line_num),
                         recommendation=self.recommendation,
+                        fix_snippet=self.fix_snippet,
                     )
                     findings.append(finding)
                     break
@@ -126,6 +128,7 @@ class WeakCryptographyRule(BaseRule):
                 confidence=confidence,
                 evidence=parsed.get_line(line),
                 recommendation="Usa SHA-256, SHA-512 o SHA-3 para integridad. Para contraseñas usa bcrypt, scrypt o Argon2 con sal.",
+                fix_snippet='hashlib.sha256(data).hexdigest()',
             )
             findings.append(finding)
         return findings
@@ -133,14 +136,22 @@ class WeakCryptographyRule(BaseRule):
     def _check_pycrypto(self, func_name: str, call_node: ast.Call, line: int, parsed: ParsedFile) -> List[Finding]:
         findings: List[Finding] = []
         func_lower = func_name.lower()
+        is_crypto_call = any(
+            k in func_lower for k in ("cipher", "crypto", "cryptodome", "hazmat", "des.", "des3.", "arc4.", "blowfish.")
+        )
 
         for cipher_name, (cwe, severity, confidence, desc) in self.WEAK_CIPHERS.items():
             cn_lower = cipher_name.lower()
-            if cn_lower in func_lower or (
-                call_node.args and isinstance(call_node.args[0], ast.Constant)
+            word_pat = re.compile(rf"(?:^|[._\-]){re.escape(cn_lower)}(?:$|[._\-])", re.IGNORECASE)
+            func_matches = bool(word_pat.search(func_lower))
+            arg_matches = (
+                is_crypto_call
+                and bool(call_node.args)
+                and isinstance(call_node.args[0], ast.Constant)
                 and isinstance(call_node.args[0].value, str)
-                and cn_lower in call_node.args[0].value.lower()
-            ):
+                and bool(word_pat.search(call_node.args[0].value))
+            )
+            if func_matches or arg_matches:
                 finding = Finding(
                     rule_id=f"WEAK_CIPHER_{cipher_name}",
                     title=f"Cifrado Débil: {cipher_name}",
@@ -154,6 +165,7 @@ class WeakCryptographyRule(BaseRule):
                     confidence=confidence,
                     evidence=parsed.get_line(line),
                     recommendation="Usa AES-256-GCM o ChaCha20-Poly1305 con autenticación AEAD.",
+                    fix_snippet='from cryptography.hazmat.primitives.ciphers.aead import AESGCM\naesgcm = AESGCM(AESGCM.generate_key(bit_length=256))',
                 )
                 findings.append(finding)
                 break
@@ -181,6 +193,7 @@ class WeakCryptographyRule(BaseRule):
                     confidence=0.85,
                     evidence=parsed.get_line(line),
                     recommendation="Usa secrets (Python 3.6+) o os.urandom() para seguridad criptográfica. En contextos de Flask/Django usa sus helpers.",
+                    fix_snippet='import secrets\ntoken = secrets.token_hex(32)',
                 )
                 findings.append(finding)
         return findings
@@ -204,6 +217,7 @@ class WeakCryptographyRule(BaseRule):
                             confidence=0.95,
                             evidence=parsed.get_line(line),
                             recommendation="Usa RSA >= 2048 bits, o mejor curvas elípticas (P-256, Ed25519).",
+                            fix_snippet='rsa_key_size = 3072',
                         )
                         findings.append(finding)
         return findings
@@ -219,6 +233,7 @@ class InsecureHashPasswordRule(BaseRule):
     cwe = "CWE-916"
     owasp = "A02:2021-Cryptographic Failures"
     recommendation = "Usa bcrypt, Argon2 (argon2-cffi) o PBKDF2-HMAC-SHA256 con un factor de trabajo (costo/iteraciones) adecuado y sal única por contraseña."
+    fix_snippet = 'import bcrypt\nhashed_pwd = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12))'
 
     PASSWORD_CONTEXT = {"password", "passwd", "pwd", "user_password", "user_passwd", "contraseña", "clave"}
 
@@ -257,6 +272,7 @@ class InsecureHashPasswordRule(BaseRule):
                                 confidence=0.8,
                                 evidence=parsed.get_line(line),
                                 recommendation=self.recommendation,
+                                fix_snippet=self.fix_snippet,
                             )
                             findings.append(finding)
         return findings

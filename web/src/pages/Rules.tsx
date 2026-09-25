@@ -93,6 +93,50 @@ const FALLBACK_RULES: RuleDto[] = [
     recommendation:
       "Usa bcrypt, Argon2 o PBKDF2-HMAC-SHA256 con alto costo y sal única.",
   },
+  {
+    id: "SSRF",
+    title: "Server-Side Request Forgery (SSRF)",
+    severity: "high",
+    cwe: "CWE-918",
+    owasp: "A10:2021-Server-Side Request Forgery",
+    description:
+      "Peticiones HTTP salientes cuya URL proviene de entrada del usuario sin validar contra una allowlist.",
+    recommendation:
+      "Valida las URLs contra una lista blanca de dominios permitidos y bloquea IPs privadas/loopback.",
+  },
+  {
+    id: "INSECURE_DESERIALIZATION",
+    title: "Deserialización Insegura",
+    severity: "critical",
+    cwe: "CWE-502",
+    owasp: "A08:2021-Software and Data Integrity Failures",
+    description:
+      "Deserialización de objetos binarios o YAML (pickle, marshal, yaml.load) susceptible a ejecución remota de código.",
+    recommendation:
+      "Usa json.loads() o yaml.safe_load() con SafeLoader.",
+  },
+  {
+    id: "SECURITY_MISCONFIGURATION",
+    title: "Configuración de Seguridad Incorrecta (SSL / Debug / CORS)",
+    severity: "high",
+    cwe: "CWE-295",
+    owasp: "A05:2021-Security Misconfiguration",
+    description:
+      "Desactivación de validación de certificados TLS (verify=False) o modo debug=True activo en producción.",
+    recommendation:
+      "Mantén siempre verify=True en peticiones HTTPS y desactiva debug=True en producción.",
+  },
+  {
+    id: "JWT_WEAKNESS",
+    title: "Validación Insegura de Token JWT",
+    severity: "high",
+    cwe: "CWE-347",
+    owasp: "A07:2021-Identification and Authentication Failures",
+    description:
+      "Decodificación de tokens JWT deshabilitando verify_signature o permitiendo el algoritmo 'none'.",
+    recommendation:
+      "Especifica algoritmos explícitos (HS256/RS256) y mantén verify_signature=True.",
+  },
 ];
 
 const SEV_CLASS: Record<string, string> = {

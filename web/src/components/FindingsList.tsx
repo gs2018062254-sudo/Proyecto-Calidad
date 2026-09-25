@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSastStore, buildFindingKey } from "../store/sast";
 import { SEVERITY_INFO, confidenceColor, severityOrder } from "../lib/severity";
 import type { FindingDto, Severity } from "../types";
@@ -12,6 +13,9 @@ import {
   ExternalLink,
   ArrowRight,
   CalendarDays,
+  Copy,
+  Check,
+  Wrench,
 } from "lucide-react";
 import { formatDateTime, formatTime } from "../lib/datetime";
 
@@ -254,11 +258,20 @@ export default function FindingsList() {
 }
 
 function FindingDetail({ f }: { f: FindingDto }) {
+  const [copied, setCopied] = useState(false);
   const sev = SEVERITY_INFO[f?.severity ?? "info"] ?? {
     color: "#64748b",
     labelEs: "Info",
   };
   const owaspClean = (f.owasp || "").toString().split("-")[0];
+
+  const handleCopyFix = () => {
+    if (!f.fix_snippet) return;
+    navigator.clipboard.writeText(f.fix_snippet);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-3 pt-1">
       <div>
@@ -324,6 +337,32 @@ function FindingDetail({ f }: { f: FindingDto }) {
           {f.recommendation || "Sin recomendación específica disponible."}
         </p>
       </div>
+
+      {f.fix_snippet && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-cyan-400 flex items-center gap-1.5">
+              <Wrench size={12} /> Código seguro sugerido (Auto-Fix)
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyFix}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-[11px] font-mono bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 transition"
+            >
+              {copied ? <Check size={11} /> : <Copy size={11} />}
+              {copied ? "Copiado" : "Copiar fix"}
+            </button>
+          </div>
+          <pre
+            className="rounded-[var(--radius-sm)] p-2.5 bg-[#061512] border border-emerald-800/50 text-emerald-200 overflow-x-auto text-xs font-mono"
+            style={{
+              borderLeft: "3px solid #10b981",
+            }}
+          >
+            <code>{f.fix_snippet}</code>
+          </pre>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5 pt-1 font-mono text-[11px]">
         {owaspClean && <span className="studio-badge">OWASP: {owaspClean}</span>}

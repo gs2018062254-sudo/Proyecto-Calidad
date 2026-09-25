@@ -48,7 +48,12 @@ def _validate_output(ctx, param, value):
 @click.version_option(version=__version__, prog_name="sast", message="%(prog)s v%(version)s")
 def main():
     """Comando principal."""
-    pass
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
 
 @main.command("scan", short_help="Escanea archivos o directorios en busca de vulnerabilidades")
@@ -166,6 +171,16 @@ def scan(
 @main.command("list-rules", short_help="Muestra las reglas de seguridad activas")
 def list_rules():
     """Lista todas las reglas de detección disponibles."""
+    _print_rules()
+
+
+@main.command("rules", short_help="Alias de list-rules: muestra las reglas de seguridad activas")
+def rules_alias():
+    """Alias para listar todas las reglas de detección disponibles."""
+    _print_rules()
+
+
+def _print_rules():
     engine = AnalyzerEngine()
     rules = engine.list_rules()
 
@@ -206,9 +221,9 @@ def demo(fmt: str, output: Optional[str]):
     findings = engine.scan_source(demo_source, file_path="demo.py")
 
     from .models.finding import ScanResult
-    from datetime import datetime
+    from datetime import datetime, timezone
     result = ScanResult(target="demo.py", files_scanned=1, findings=findings)
-    result.end_time = datetime.utcnow().isoformat()
+    result.end_time = datetime.now(timezone.utc).isoformat()
 
     if fmt == "text":
         ConsoleReporter().generate(result, verbose=True)

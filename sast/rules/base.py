@@ -19,6 +19,7 @@ class BaseRule(ABC):
     cwe: str = ""
     owasp: str = ""
     recommendation: str = ""
+    fix_snippet: str = ""
 
     def __init__(self):
         if not self.rule_id:
@@ -36,6 +37,7 @@ class BaseRule(ABC):
         column: int = 0,
         evidence: str = "",
         confidence: float = 0.8,
+        fix_snippet: str = "",
         extra: dict | None = None,
     ) -> "Finding":
         from ..models.finding import Finding, Severity
@@ -56,5 +58,6 @@ class BaseRule(ABC):
             confidence=confidence,
             evidence=evidence,
             recommendation=self.recommendation,
+            fix_snippet=fix_snippet or self.fix_snippet,
             metadata=extra or {},
         )

@@ -30,6 +30,7 @@ export interface FindingDto {
   sink?: string | null;
   data_flow?: DataFlowStep[];
   recommendation: string;
+  fix_snippet?: string;
   metadata?: Record<string, any>;
   timestamp?: string;
 }
@@ -88,6 +89,7 @@ export interface RuleDto {
   owasp?: string;
   description: string;
   recommendation?: string;
+  fix_snippet?: string;
 }
 
 export type ScanMode = "paste" | "files" | "github";

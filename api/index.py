@@ -49,6 +49,12 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     port = int(os.environ.get("PORT", 5001))
     print(f"🛡️  SAST Web API corriendo en http://localhost:{port}/api/")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

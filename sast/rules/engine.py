@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Iterable, Dict, Any, Type
 
@@ -17,6 +17,12 @@ from .injection_rules import (
     XSSRule,
 )
 from .crypto_rules import WeakCryptographyRule, InsecureHashPasswordRule
+from .owasp_rules import (
+    SSRFRule,
+    InsecureDeserializationRule,
+    SecurityMisconfigurationRule,
+    JWTWeaknessRule,
+)
 
 
 DEFAULT_RULES: List[Type[BaseRule]] = [
@@ -28,6 +34,10 @@ DEFAULT_RULES: List[Type[BaseRule]] = [
     XSSRule,
     WeakCryptographyRule,
     InsecureHashPasswordRule,
+    SSRFRule,
+    InsecureDeserializationRule,
+    SecurityMisconfigurationRule,
+    JWTWeaknessRule,
 ]
 
 SUPPORTED_EXTENSIONS = {
@@ -108,7 +118,7 @@ class AnalyzerEngine:
                     "type": type(e).__name__,
                 })
 
-        result.end_time = datetime.utcnow().isoformat()
+        result.end_time = datetime.now(timezone.utc).isoformat()
         result.findings = [
             f for f in result.findings
             if f.confidence >= self.config.min_confidence
@@ -222,6 +232,9 @@ class AnalyzerEngine:
                 "title": rule.title,
                 "severity": rule.severity,
                 "cwe": rule.cwe,
-                "description": rule.description[:100] + ("..." if len(rule.description) > 100 else ""),
+                "owasp": rule.owasp,
+                "description": rule.description,
+                "recommendation": rule.recommendation,
+                "fix_snippet": getattr(rule, "fix_snippet", ""),
             })
         return info

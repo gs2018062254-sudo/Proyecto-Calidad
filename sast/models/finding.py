@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Severity(str, Enum):
@@ -59,8 +59,9 @@ class Finding:
     sink: Optional[str] = None
     data_flow: List[Dict[str, Any]] = field(default_factory=list)
     recommendation: str = ""
+    fix_snippet: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -81,9 +82,9 @@ class ScanResult:
     files_scanned: int = 0
     findings: List[Finding] = field(default_factory=list)
     errors: List[Dict[str, Any]] = field(default_factory=list)
-    start_time: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    start_time: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     end_time: Optional[str] = None
-    sast_version: str = "0.1.0"
+    sast_version: str = "0.2.0"
 
     @property
     def duration_seconds(self) -> float:

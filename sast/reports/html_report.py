@@ -5,7 +5,7 @@ import json
 import base64
 from pathlib import Path
 from typing import Optional, Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.finding import ScanResult, Severity
 
@@ -367,7 +367,7 @@ class HtmlReporter:
             "sast_version": result.sast_version,
             "files_scanned": result.files_scanned,
             "duration": f"{result.duration_seconds:.2f}",
-            "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "summary_critical": summary.get("critical", 0),
             "summary_high": summary.get("high", 0),
             "summary_medium": summary.get("medium", 0),
@@ -429,6 +429,8 @@ class HtmlReporter:
                 body_parts.append(f"<h4>🔀 Flujo de Datos (Taint)</h4><ul class=\"dataflow-list\">{''.join(items)}</ul>")
             if f.recommendation:
                 body_parts.append(f"<h4>Recomendación</h4><div class=\"recommendation-box\">{html.escape(f.recommendation)}</div>")
+            if getattr(f, "fix_snippet", ""):
+                body_parts.append(f"<h4>Código Seguro Sugerido</h4><pre class=\"code\">{html.escape(f.fix_snippet)}</pre>")
 
             body_html = "".join(body_parts)
             parts.append(f"""

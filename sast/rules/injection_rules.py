@@ -20,6 +20,7 @@ class SQLInjectionRule(BaseRule):
     cwe = "CWE-89"
     owasp = "A03:2021-Injection"
     recommendation = "Usa consultas parametrizadas (prepared statements) con placeholders en lugar de concatenar strings. Evita construir SQL dinámicamente con entrada del usuario."
+    fix_snippet = 'cursor.execute("SELECT * FROM users WHERE username = ?", (username,))'
 
     SQL_EXEC_METHODS = {
         "execute", "executemany", "executescript",
@@ -39,7 +40,11 @@ class SQLInjectionRule(BaseRule):
             finding = self._make_taint_finding(parsed, flow, confidence)
             findings.append(finding)
 
-        findings.extend(self._check_string_concat_sql(parsed))
+        taint_lines = {f.line for f in findings}
+        for concat_finding in self._check_string_concat_sql(parsed):
+            if concat_finding.line not in taint_lines:
+                findings.append(concat_finding)
+
         findings.extend(self._check_multilang_sql(parsed))
 
         return findings
@@ -104,6 +109,7 @@ class SQLInjectionRule(BaseRule):
             sink=f"{flow.sink_call} @ línea {flow.sink_line}",
             data_flow=data_flow,
             recommendation=self.recommendation,
+            fix_snippet=self.fix_snippet,
         )
         return finding
 
@@ -113,19 +119,23 @@ class SQLInjectionRule(BaseRule):
         from ..core.parser import PythonParser
 
         parser = PythonParser()
+        _, sanitized_map = self.taint_analyzer._build_taint_map(parsed)
 
         for func_name, call_node, line in parsed.function_calls:
             last_part = func_name.split(".")[-1] if "." in func_name else func_name
             if last_part in self.SQL_EXEC_METHODS and call_node.args:
                 first_arg = call_node.args[0]
                 if self._is_dynamic_string_builder(first_arg):
-                    has_tainted = False
+                    has_unsanitized_var = False
                     tainted_names = parser.get_node_names(first_arg)
                     for name in tainted_names:
+                        var_san = sanitized_map.get(name, set())
+                        if "*" in var_san or "sql" in var_san:
+                            continue
                         if name in parsed.assignments:
-                            has_tainted = True
+                            has_unsanitized_var = True
                             break
-                    if has_tainted or isinstance(first_arg, (ast.BinOp, ast.JoinedStr)):
+                    if has_unsanitized_var:
                         confidence = 0.6 if not isinstance(first_arg, ast.JoinedStr) else 0.7
                         finding = self._make_finding(
                             parsed=parsed,
@@ -161,6 +171,7 @@ class CommandInjectionRule(BaseRule):
     cwe = "CWE-78"
     owasp = "A03:2021-Injection"
     recommendation = "Evita ejecutar comandos del sistema con datos del usuario. Usa APIs de bibliotecas en lugar de shell. Si es necesario, usa subprocess con argumentos como lista (no shell=True) y valida estrictamente la entrada."
+    fix_snippet = 'subprocess.run(["ping", "-c", "1", shlex.quote(host)], shell=False, check=True)'
 
     def __init__(self):
         super().__init__()
@@ -194,6 +205,7 @@ class CommandInjectionRule(BaseRule):
                 sink=f"{flow.sink_call} @ línea {flow.sink_line}",
                 data_flow=data_flow,
                 recommendation=self.recommendation,
+                fix_snippet=self.fix_snippet,
             )
             findings.append(finding)
 
@@ -229,6 +241,7 @@ class CommandInjectionRule(BaseRule):
                         confidence=0.88,
                         evidence=parsed.get_line(line_num),
                         recommendation=self.recommendation,
+                        fix_snippet=self.fix_snippet,
                     )
                     findings.append(finding)
                     break
@@ -263,6 +276,7 @@ class CommandInjectionRule(BaseRule):
                             confidence=0.92,
                             evidence=parsed.get_line(line),
                             recommendation="Usa shell=False (predeterminado) y pasa los argumentos como una lista en lugar de un string.",
+                            fix_snippet=self.fix_snippet,
                         )
                         findings.append(finding)
                         break
@@ -279,6 +293,7 @@ class PathTraversalRule(BaseRule):
     cwe = "CWE-22"
     owasp = "A01:2021-Broken Access Control"
     recommendation = "Valida y normaliza las rutas. Usa os.path.realpath() y verifica que el resultado esté dentro de un directorio base permitido. Nunca concatenes ciegamente entrada del usuario a rutas de archivos."
+    fix_snippet = 'safe_path = os.path.join(BASE_DIR, os.path.basename(user_filename))'
 
     def __init__(self):
         super().__init__()
@@ -312,6 +327,7 @@ class PathTraversalRule(BaseRule):
                 sink=f"{flow.sink_call} @ línea {flow.sink_line}",
                 data_flow=data_flow,
                 recommendation=self.recommendation,
+                fix_snippet=self.fix_snippet,
             )
             findings.append(finding)
 
@@ -345,6 +361,7 @@ class PathTraversalRule(BaseRule):
                         confidence=0.85,
                         evidence=parsed.get_line(line_num),
                         recommendation=self.recommendation,
+                        fix_snippet=self.fix_snippet,
                     )
                     findings.append(finding)
                     break
@@ -367,6 +384,7 @@ class XSSRule(BaseRule):
     cwe = "CWE-79"
     owasp = "A03:2021-Injection"
     recommendation = "Escapa siempre la salida antes de renderizarla en HTML. Usa plantillas auto-escapantes (Jinja2 por defecto lo hace salvo | safe). Evita render_template_string con datos dinámicos."
+    fix_snippet = 'safe_output = html.escape(user_input)\nreturn render_template("index.html", content=safe_output)'
 
     def __init__(self):
         super().__init__()
@@ -400,6 +418,7 @@ class XSSRule(BaseRule):
                 sink=f"{flow.sink_call} @ línea {flow.sink_line}",
                 data_flow=data_flow,
                 recommendation=self.recommendation,
+                fix_snippet=self.fix_snippet,
             )
             findings.append(finding)
 
@@ -435,6 +454,7 @@ class XSSRule(BaseRule):
                         confidence=0.85,
                         evidence=parsed.get_line(line_num),
                         recommendation=self.recommendation,
+                        fix_snippet=self.fix_snippet,
                     )
                     findings.append(finding)
                     break

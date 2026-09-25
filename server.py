@@ -12,4 +12,4 @@ if __name__ == "__main__":
     print(f"  Scan   : http://localhost:{port}/api/scan (POST)")
     print(f"  Rules  : http://localhost:{port}/api/rules")
     print("=" * 60)
-    app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

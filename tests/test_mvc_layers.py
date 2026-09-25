@@ -52,7 +52,7 @@ def test_rules_mvc_flow(app_ctx):
     """Verifica el flujo de RulesService, RulesView y RulesController."""
     rules = RulesService.list_rules()
     assert isinstance(rules, list)
-    assert len(rules) == 8
+    assert len(rules) == 12
 
     rendered = RulesView.render(rules)
     assert rendered["ok"] is True

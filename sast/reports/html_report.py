@@ -247,8 +247,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="header-top">
       <div class="shield">🛡️</div>
       <div>
-        <h1>Informe de Seguridad SAST</h1>
-        <div class="subtitle">Análisis Estático de Código Fuente</div>
+        <h1>SAST Studio · Informe de Seguridad SAST</h1>
+        <div class="subtitle">Análisis Estático Multilenguaje (AST &amp; Flujo de Datos Taint)</div>
       </div>
     </div>
     <div class="meta-grid">
@@ -261,7 +261,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </div>
 
   <div class="summary">
-    <h2>📊 Resumen de Vulnerabilidades</h2>
+    <h2>📊 Resumen de Auditoría de Seguridad</h2>
     <div class="summary-grid">
       <div class="sev-card critical"><div class="count">{{ summary_critical }}</div><div class="label">Crítico</div></div>
       <div class="sev-card high"><div class="count">{{ summary_high }}</div><div class="label">Alto</div></div>
@@ -285,8 +285,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     {% if total_findings == 0 %}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:48px;text-align:center;">
       <div style="font-size:56px;margin-bottom:16px;">✅</div>
-      <div style="font-size:20px;font-weight:700;margin-bottom:8px;">No se encontraron vulnerabilidades</div>
-      <div style="color:var(--text-dim);">Buen trabajo! Sigue practicando código seguro.</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Código limpio · 0 hallazgos detectados</div>
+      <div style="color:var(--text-dim);">No se detectaron vulnerabilidades en esta auditoría de seguridad.</div>
     </div>
     {% else %}
     {{ findings_html }}
@@ -294,7 +294,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </div>
 
   <div class="footer">
-    Generado por SAST Analyzer v{{ sast_version }} • {{ generated_at }}
+    Generado por SAST Studio v{{ sast_version }} • Análisis Estático Multilenguaje • {{ generated_at }}
   </div>
 </div>
 

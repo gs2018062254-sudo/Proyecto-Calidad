@@ -126,10 +126,10 @@ export default function SummaryCards() {
           </div>
           <div>
             <h2 className="font-display font-bold text-lg text-white">
-              Reporte de Auditoría de Código
+              Resumen de Auditoría de Seguridad
             </h2>
             <p className="text-xs text-[var(--studio-text-secondary)] mt-0.5 font-mono">
-              <span>{total} detecciones</span>
+              <span>{total} hallazgos</span>
               <span className="mx-2 text-[var(--studio-border-bright)]">|</span>
               <span>{filesScanned} archivo{filesScanned !== 1 ? "s" : ""}</span>
               <span className="mx-2 text-[var(--studio-border-bright)]">|</span>

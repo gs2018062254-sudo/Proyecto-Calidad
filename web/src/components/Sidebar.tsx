@@ -15,9 +15,9 @@ import {
 const NAV = [
   { to: "/", end: true, label: "Consola de análisis", icon: Home },
   { to: "/rules", label: "Reglas de seguridad", icon: BookOpen },
-  { to: "/reports", label: "Reportes SARIF", icon: FileBarChart },
+  { to: "/reports", label: "Reportes y telemetría", icon: FileBarChart },
   { to: "/history", label: "Registro de auditorías", icon: History },
-  { to: "/settings", label: "Configuración", icon: Settings },
+  { to: "/settings", label: "Configuración de análisis", icon: Settings },
   { to: "/about", label: "Especificación técnica", icon: Info },
 ];
 
@@ -35,7 +35,7 @@ export default function Sidebar() {
               SAST Studio
             </div>
             <div className="text-[11px] text-[var(--studio-text-secondary)] font-normal">
-              Análisis Estático Python
+              Análisis Estático Multilenguaje
             </div>
           </div>
         </div>

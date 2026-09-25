@@ -172,15 +172,15 @@ export default function Rules() {
       {/* Header */}
       <section className="studio-console-header">
         <div className="studio-title-group">
-          <h1>Catálogo de Reglas de Seguridad (SAST)</h1>
+          <h1>Reglas de Seguridad (SAST)</h1>
           <p>
             {display.length} reglas activas cubriendo mitigación de vulnerabilidades OWASP Top 10,
-            debilidades CWE y análisis de propagación de flujo de datos en Python.
+            debilidades CWE y análisis de flujo de datos (Taint Flow) multilenguaje.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="studio-badge text-blue-400">
-            <BookOpen size={13} /> {display.length} reglas registradas
+            <BookOpen size={13} /> {display.length} reglas activas
           </span>
         </div>
       </section>

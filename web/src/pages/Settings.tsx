@@ -57,10 +57,10 @@ export default function Settings() {
                 onChange={(e) => setOption("ruleset", e.target.value)}
                 className="studio-select w-full !text-xs !py-2.5"
               >
-                <option value="all">Todas las reglas (8)</option>
-                <option value="owasp">Solo OWASP Top 10</option>
-                <option value="injection">Inyecciones únicamente</option>
-                <option value="secrets">Secretos y criptografía</option>
+                <option value="all">Todas las reglas (12)</option>
+                <option value="owasp">Solo OWASP Top 10 (10)</option>
+                <option value="injection">Inyecciones únicamente (4)</option>
+                <option value="secrets">Secretos y criptografía (3)</option>
               </select>
               <span className="text-[11px] text-[var(--studio-text-faint)] mt-1.5 block">
                 Filtra qué heurísticas AST y reglas de propagación se ejecutan.
@@ -206,16 +206,16 @@ export default function Settings() {
               className="studio-btn-secondary w-full !justify-start !py-2.5 text-rose-400 hover:text-rose-300 border-rose-950/60 hover:border-rose-800/60"
               onClick={clearHistory}
             >
-              <Trash2 size={14} /> Purgar todo el historial local
+              <Trash2 size={14} /> Limpiar registro de auditorías
             </button>
             <button className="studio-btn-secondary w-full !justify-start !py-2.5" onClick={exportJson}>
-              <Download size={14} className="text-blue-400" /> Descargar reporte JSON
+              <Download size={14} className="text-blue-400" /> Exportar JSON
             </button>
             <button className="studio-btn-secondary w-full !justify-start !py-2.5" onClick={exportSarif}>
-              <UploadCloud size={14} className="text-purple-400" /> Exportar SARIF 2.1 (OASIS)
+              <UploadCloud size={14} className="text-purple-400" /> Exportar SARIF 2.1
             </button>
             <button className="studio-btn-secondary sm:col-span-2 w-full !justify-start !py-2.5" onClick={exportHtml}>
-              <UploadCloud size={14} className="text-emerald-400" /> Generar reporte HTML Standalone
+              <UploadCloud size={14} className="text-emerald-400" /> Exportar HTML
             </button>
           </div>
         </div>

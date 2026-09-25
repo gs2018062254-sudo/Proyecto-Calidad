@@ -22,12 +22,12 @@ export default function Layout() {
           </main>
           <footer className="px-6 py-4 border-t border-[var(--studio-border)] bg-[var(--studio-panel)] text-xs text-[var(--studio-text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-2.5">
             <div>
-              Plataforma de Análisis Estático de Vulnerabilidades · Python AST & Taint Flow Engine
+              SAST Studio · Análisis Estático Multilenguaje (AST & Flujo de Datos Taint)
             </div>
             <div className="flex items-center gap-4 text-[var(--studio-text-faint)] font-mono text-[11px]">
               <span>Motor Flask MVC (5001)</span>
-              <span>SARIF 2.1 Standard</span>
-              <span>12 Reglas CWE/OWASP</span>
+              <span>Estándar SARIF 2.1</span>
+              <span>12 reglas activas (CWE / OWASP)</span>
             </div>
           </footer>
         </div>

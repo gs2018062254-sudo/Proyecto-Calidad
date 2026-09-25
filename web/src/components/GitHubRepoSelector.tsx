@@ -187,7 +187,7 @@ export default function GitHubRepoSelector() {
               className="studio-btn-primary !text-xs !py-2.5 !px-5 w-full sm:w-auto shrink-0 !justify-center"
             >
               <Play size={13} fill="currentColor" />
-              {status === "loading" ? "Analizando repositorio…" : "Escanear repositorio"}
+              {status === "loading" ? "Analizando repositorio…" : "Analizar repositorio"}
             </button>
           </div>
         </form>

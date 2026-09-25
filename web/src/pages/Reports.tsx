@@ -169,15 +169,15 @@ export default function Reports() {
       {/* Console Header */}
       <section className="studio-console-header">
         <div className="studio-title-group">
-          <h1>Panel de Reportes y Telemetría Agregada</h1>
+          <h1>Reportes y Telemetría</h1>
           <p>
             Métricas acumuladas, series temporales por periodo y descarga consolidada de auditorías.
-            Registros sincronizados con timestamps UTC y visualización local.
+            Registros sincronizados con marcas de tiempo UTC y visualización local.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <span className="studio-badge text-blue-400">
-            {entries.length} auditorías en el historial
+            {entries.length} auditorías registradas
           </span>
           <button className="studio-btn-primary" onClick={exportAggregateJson}>
             <Download size={13} /> Exportar reporte consolidado (JSON)
@@ -385,7 +385,7 @@ export default function Reports() {
               Reportes Individuales de Auditoría
             </h2>
             <div className="text-xs text-[var(--studio-text-secondary)] mt-0.5">
-              Exportación individual en JSON, SARIF 2.1 y HTML standalone.
+              Exportación individual en JSON, SARIF 2.1 y HTML autocontenido.
             </div>
           </div>
           <span className="studio-badge">
@@ -402,7 +402,7 @@ export default function Reports() {
               No hay reportes que coincidan con la búsqueda.
             </div>
             <button className="studio-btn-secondary" onClick={() => nav("/")}>
-              Realizar un análisis
+              Ir a la consola de análisis
             </button>
           </div>
         ) : (
@@ -440,7 +440,7 @@ export default function Reports() {
                   <div className="grid grid-cols-5 gap-1 text-center font-mono text-[10px] my-2.5">
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-rose-900/30 p-1 text-rose-400">
                       <div className="font-bold text-xs">{h.summary.critical || 0}</div>
-                      <div>Crit</div>
+                      <div>Crítico</div>
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-amber-900/30 p-1 text-amber-400">
                       <div className="font-bold text-xs">{h.summary.high || 0}</div>
@@ -448,7 +448,7 @@ export default function Reports() {
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-yellow-900/30 p-1 text-yellow-400">
                       <div className="font-bold text-xs">{h.summary.medium || 0}</div>
-                      <div>Med</div>
+                      <div>Medio</div>
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-panel)] border border-emerald-900/30 p-1 text-emerald-400">
                       <div className="font-bold text-xs">{h.summary.low || 0}</div>

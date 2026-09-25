@@ -33,7 +33,7 @@ export default function CodeEditor() {
         height="490px"
         theme={dracula}
         extensions={[python()]}
-        placeholder={`# Pega tu código Python aquí y pulsa "Analizar código"\n#\n# Ejemplo rápido:\n# username = input("Usuario: ")\n# query = "SELECT * FROM users WHERE name = '" + username + "'"\n# cursor.execute(query)\n#\n# O pulsa "Demo vulnerable" en la barra superior para cargar el caso de prueba completo.`}
+        placeholder={`# Pega tu código fuente aquí y pulsa "Analizar código"\n#\n# Ejemplo rápido:\n# username = input("Usuario: ")\n# query = "SELECT * FROM users WHERE name = '" + username + "'"\n# cursor.execute(query)\n#\n# O pulsa "Cargar demo" en la barra superior para cargar el caso de prueba completo.`}
         onChange={(v) => setValue(v, filename)}
         basicSetup={{
           lineNumbers: true,

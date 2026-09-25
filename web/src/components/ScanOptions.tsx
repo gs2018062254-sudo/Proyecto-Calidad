@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 
 const RULESETS = [
-  { value: "all", label: "Todas las reglas (seguridad completa)", count: 8 },
-  { value: "owasp", label: "Vulnerabilidades web OWASP", count: 6 },
-  { value: "injection", label: "Inyecciones de código y SQL", count: 3 },
-  { value: "secrets", label: "Secretos y claves expuestas", count: 2 },
+  { value: "all", label: "Todas las reglas (12)", count: 12 },
+  { value: "owasp", label: "Solo OWASP Top 10", count: 10 },
+  { value: "injection", label: "Inyecciones únicamente", count: 4 },
+  { value: "secrets", label: "Secretos y criptografía", count: 3 },
 ];
 
 const REPORT_FORMATS: { value: ReportFormat; label: string; icon: typeof BookText }[] = [
@@ -111,9 +111,9 @@ export default function ScanOptions() {
       {/* REGLAS BÁSICAS (Siempre visible) */}
       <div className="pt-3 border-t border-[var(--studio-border)]">
         <label className="text-xs font-medium text-slate-200 mb-1.5 flex items-center justify-between">
-          <span>Reglas de análisis</span>
+          <span>Conjunto de reglas</span>
           <span className="text-[11px] font-mono text-[var(--studio-text-secondary)]">
-            {RULESETS.find((r) => r.value === options.ruleset)?.count || 8} activas
+            {RULESETS.find((r) => r.value === options.ruleset)?.count || 12} activas
           </span>
         </label>
         <select

@@ -102,9 +102,9 @@ export default function Home() {
       {/* ============ STUDIO CONSOLE HEADER & HUD ============ */}
       <section className="studio-console-header">
         <div className="studio-title-group">
-          <h1>Auditoría de Seguridad de Código</h1>
+          <h1>Consola de Análisis de Seguridad</h1>
           <p>
-            Detecta vulnerabilidades, inyecciones SQL, fallos OWASP y brechas de seguridad en tu código y repositorios.
+            Detecta vulnerabilidades, inyecciones SQL, fallos OWASP Top 10 y brechas de seguridad en tu código y repositorios.
           </p>
         </div>
 
@@ -112,10 +112,10 @@ export default function Home() {
         <div className="studio-hud-strip">
           <div className="studio-hud-item">
             <span className="studio-hud-label">Reglas activas</span>
-            <span className="studio-hud-value text-blue-400">8 AST</span>
+            <span className="studio-hud-value text-blue-400">12 AST</span>
           </div>
           <div className="studio-hud-item">
-            <span className="studio-hud-label">Vulnerabilidades</span>
+            <span className="studio-hud-label">Hallazgos</span>
             <span className="studio-hud-value text-rose-400">{totalVulns}</span>
           </div>
           <div className="studio-hud-item">
@@ -154,7 +154,7 @@ export default function Home() {
                 onClick={() => setMode("files")}
                 className={`studio-tab-btn ${mode === "files" ? "active" : ""}`}
               >
-                <FolderClosed size={13} /> Subir archivo
+                <FolderClosed size={13} /> Subir archivos
               </button>
               <button
                 onClick={() => setMode("github")}
@@ -270,17 +270,17 @@ export default function Home() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="font-display font-bold text-sm text-white">
-                  Auditorías de la sesión
+                  Registro de auditorías
                 </div>
                 <div className="text-[11px] text-[var(--studio-text-secondary)]">
-                  Registro reciente de escaneos
+                  Auditorías recientes de la sesión
                 </div>
               </div>
               <button
                 className="text-xs font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-0.5"
                 onClick={() => nav("/history")}
               >
-                Historial <ChevronRight size={12} />
+                Ver registro <ChevronRight size={12} />
               </button>
             </div>
 
@@ -291,7 +291,7 @@ export default function Home() {
                     <HistoryIcon size={14} />
                   </div>
                   <div className="text-xs font-medium text-slate-300">
-                    Sin registros todavía
+                    Sin registros de auditoría
                   </div>
                   <div className="text-[11px] text-[var(--studio-text-faint)]">
                     Los resultados de análisis aparecerán aquí.
@@ -302,7 +302,7 @@ export default function Home() {
                   const sevMax = r.severity_max;
                   const has = r.severity_count;
                   const ok = has === 0;
-                  let statusLabel = ok ? "Limpio" : `${has} fallos`;
+                  let statusLabel = ok ? "Código limpio" : `${has} hallazgos`;
                   let sevClass = "studio-sev-low";
                   if (!ok) {
                     if (sevMax === "critical") sevClass = "studio-sev-critical";

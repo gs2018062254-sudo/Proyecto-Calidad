@@ -23,7 +23,7 @@ const PIPELINE_STAGES = [
   },
   {
     step: "02",
-    title: "Mapeo de Flujo de Manchas (Taint Analysis)",
+    title: "Análisis de Flujo de Datos (Taint Flow)",
     subtitle: "Fuentes de entrada a sumideros peligrosos",
     icon: Workflow,
     desc: "Se identifican orígenes no confiables (Sources: `request.args`, `os.environ`, `sys.argv`, `input()`). El motor rastrea la propagación de estas variables a través de concatenaciones y asignaciones hasta alcanzar sinks de ejecución crítica (`eval`, `subprocess.Popen`, `cursor.execute`).",
@@ -32,15 +32,15 @@ const PIPELINE_STAGES = [
   {
     step: "03",
     title: "Motor de Heurísticas y Reglas CWE",
-    subtitle: "8 reglas especializadas",
+    subtitle: "12 reglas activas especializadas",
     icon: Cpu,
-    desc: "Cada nodo del AST se confronta con las 8 heurísticas de seguridad del motor. El algoritmo calcula un score de confianza (0.0 a 1.0) ponderando la presencia de desinfectantes, la distancia de flujo y los patrones de expresiones regulares.",
+    desc: "Cada nodo del AST se confronta con las 12 heurísticas de seguridad del motor. El algoritmo calcula un score de confianza (0.0 a 1.0) ponderando la presencia de desinfectantes, la distancia de flujo y los patrones de expresiones regulares.",
     badge: "Heuristic Scoring",
   },
   {
     step: "04",
     title: "Generación de Reportes Estándar",
-    subtitle: "SARIF 2.1.0 & Formato Nativo JSON",
+    subtitle: "Estándar SARIF 2.1 y Formato JSON",
     icon: ShieldCheck,
     desc: "Los hallazgos se clasifican por severidad (Crítico, Alto, Medio, Bajo, Info). Cada elemento incorpora fragmento de código afectado, línea exacta, enlace normativo a CWE/OWASP y pasos de mitigación recomendados.",
     badge: "OASIS SARIF Compliant",
@@ -50,15 +50,15 @@ const PIPELINE_STAGES = [
 const TECHNICAL_LIMITS = [
   {
     label: "Ámbito Intraprocedural",
-    detail: "El rastreo de manchas (taint) se ejecuta dentro de cada función. No cruza fronteras entre diferentes invocaciones de funciones en módulos remotos.",
+    detail: "El rastreo de flujo de datos (Taint Flow) se ejecuta dentro de cada función. No cruza fronteras entre diferentes invocaciones de funciones en módulos remotos.",
   },
   {
     label: "Evaluación Estática Pura",
     detail: "No se ejecuta código en tiempo de ejecución. Modificaciones dinámicas en tiempo de ejecución (`getattr`, `locals()`) no son resueltas dinámicamente.",
   },
   {
-    label: "Ecosistema Python",
-    detail: "La suite de análisis actual está optimizada exclusivamente para scripts y aplicaciones construidas en Python 3.8+.",
+    label: "Ecosistema Multilenguaje",
+    detail: "Análisis AST profundo y flujo de datos para Python 3.8+, complementado con heurísticas estáticas para TypeScript, JavaScript, PHP, Java, Go, C/C++/C# y SQL.",
   },
   {
     label: "Análisis de Dependencias (SCA)",
@@ -76,10 +76,10 @@ export default function About() {
           <span>ESPECIFICACIÓN TÉCNICA Y ARQUITECTURA</span>
         </div>
         <h1 className="font-display font-bold text-3xl tracking-tight text-white">
-          Motor de Análisis Estático (SAST)
+          Especificación Técnica
         </h1>
         <p className="text-xs sm:text-sm text-[var(--studio-text-secondary)] font-mono mt-2 leading-relaxed max-w-3xl">
-          Arquitectura interna basada en Árboles de Sintaxis Abstracta (AST) de Python y grafos de propagación de flujo de datos contaminados (Taint Analysis).
+          Arquitectura interna basada en Árboles de Sintaxis Abstracta (AST), heurísticas multilenguaje y grafos de propagación de flujo de datos contaminados (Taint Flow).
         </p>
       </div>
 
@@ -169,7 +169,7 @@ export default function About() {
       <section className="grid sm:grid-cols-3 gap-4">
         <div className="studio-panel p-4 space-y-2">
           <div className="flex items-center gap-2 text-xs font-mono font-semibold text-purple-400">
-            <FileCode2 size={15} /> SARIF 2.1.0 (OASIS)
+            <FileCode2 size={15} /> Estándar SARIF 2.1 (OASIS)
           </div>
           <p className="text-xs text-[var(--studio-text-secondary)] leading-relaxed">
             Formato estándar para integración en GitHub Code Scanning, Azure DevOps y SonarQube.
@@ -187,7 +187,7 @@ export default function About() {
 
         <div className="studio-panel p-4 space-y-2">
           <div className="flex items-center gap-2 text-xs font-mono font-semibold text-emerald-400">
-            <Code2 size={15} /> Reporte HTML Standalone
+            <Code2 size={15} /> Reporte HTML Autocontenido
           </div>
           <p className="text-xs text-[var(--studio-text-secondary)] leading-relaxed">
             Documento autocontenido apto para entrega a clientes o auditorías de cumplimiento ISO 27001.
@@ -203,15 +203,15 @@ export default function About() {
               ¿Listo para auditar código?
             </h3>
             <p className="text-xs text-[var(--studio-text-secondary)]">
-              Accede directamente al entorno de análisis o examina las heurísticas en el catálogo de reglas.
+              Accede directamente a la consola de análisis o examina las heurísticas en el catálogo de reglas de seguridad.
             </p>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
             <Link to="/rules" className="studio-btn-secondary !text-xs !py-2">
-              Ver reglas
+              Reglas de seguridad
             </Link>
             <Link to="/" className="studio-btn-primary !text-xs !py-2">
-              Abrir consola <ArrowRight size={14} />
+              Consola de análisis <ArrowRight size={14} />
             </Link>
           </div>
         </div>

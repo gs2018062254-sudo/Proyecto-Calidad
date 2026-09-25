@@ -5,10 +5,10 @@ import { Loader2, AlertTriangle, Clock, CalendarClock } from "lucide-react";
 import { formatDateTime, formatTime, nowISO } from "../lib/datetime";
 
 const STAGES = [
-  { label: "Iniciando motor", detail: "Preparando analizador de seguridad Python" },
+  { label: "Iniciando motor", detail: "Preparando motor de análisis estático multilenguaje" },
   { label: "Parseando AST", detail: "Construyendo árbol sintáctico abstracto" },
-  { label: "Taint analysis", detail: "Rastreando flujo de fuentes a sumideros" },
-  { label: "Generando reporte", detail: "Clasificando y ordenando hallazgos CWE" },
+  { label: "Flujo de datos (Taint Flow)", detail: "Rastreando propagación de fuentes a sumideros" },
+  { label: "Generando reporte", detail: "Clasificando y ordenando hallazgos CWE / OWASP" },
 ];
 
 export default function ScanProgress() {

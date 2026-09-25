@@ -16,7 +16,7 @@ export default function Topbar() {
             </span>
             <span className="text-[var(--studio-text-faint)] hidden sm:inline">/</span>
             <span className="text-xs text-[var(--studio-text-secondary)] hidden sm:inline font-mono">
-              Consola de análisis estático
+              Consola de análisis
             </span>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function Topbar() {
           <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-[var(--studio-border)] text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-slate-300">Puerto 5001</span>
-            <span className="text-emerald-400">Activo</span>
+            <span className="text-emerald-400">En línea</span>
           </div>
 
           <Link
@@ -34,7 +34,7 @@ export default function Topbar() {
             className="studio-btn-secondary !text-xs !py-1 !px-2.5 inline-flex items-center gap-1.5"
           >
             <Activity size={13} className="text-blue-400" />
-            <span>12 reglas</span>
+            <span>12 reglas activas</span>
           </Link>
         </div>
       </div>

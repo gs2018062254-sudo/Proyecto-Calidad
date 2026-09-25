@@ -54,7 +54,7 @@ export default function History() {
   const [severity, setSeverity] = useState<Severity | "all">("all");
   const [onlyWithVulns, setOnlyWithVulns] = useState(false);
   const [sinceHours, setSinceHours] = useState<number | "all">("all");
-  const [mode, setMode] = useState<"all" | "paste" | "files">("all");
+  const [mode, setMode] = useState<"all" | "paste" | "files" | "github">("all");
   const [view, setView] = useState<"table" | "list">("table");
 
   const now = Date.now();
@@ -105,15 +105,15 @@ export default function History() {
       {/* Console Header */}
       <section className="studio-console-header">
         <div className="studio-title-group">
-          <h1>Registro de Auditorías y Escaneos Realizados</h1>
+          <h1>Registro de Auditorías</h1>
           <p>
             Historial persistido localmente y sincronizado en tiempo real entre pestañas.
-            Permite inspección forense de resultados previos, reapertura y exportación en JSON/SARIF/HTML.
+            Permite inspección forense de resultados previos, reapertura y exportación en JSON, SARIF 2.1 y HTML.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="studio-badge text-emerald-400">
-            <HistoryIcon size={12} /> {history.length} sesiones guardadas
+            <HistoryIcon size={12} /> {history.length} auditorías guardadas
           </span>
           <button className="studio-btn-secondary" onClick={() => loadFromStorage()}>
             <RefreshCw size={13} /> Sincronizar
@@ -123,7 +123,7 @@ export default function History() {
             onClick={() => setConfirmClear(true)}
             disabled={history.length === 0}
           >
-            <Trash2 size={13} /> Limpiar historial
+            <Trash2 size={13} /> Limpiar registro
           </button>
         </div>
       </section>
@@ -210,12 +210,13 @@ export default function History() {
         <div>
           <select
             value={mode}
-            onChange={(e) => setMode(e.target.value as "all" | "paste" | "files")}
+            onChange={(e) => setMode(e.target.value as "all" | "paste" | "files" | "github")}
             className="studio-select"
           >
             <option value="all">Cualquier origen</option>
-            <option value="paste">Código pegado</option>
-            <option value="files">Archivos subidos</option>
+            <option value="paste">Pegar código</option>
+            <option value="files">Subir archivos</option>
+            <option value="github">Repositorio GitHub</option>
           </select>
         </div>
 
@@ -226,7 +227,7 @@ export default function History() {
             onChange={(e) => setOnlyWithVulns(e.target.checked)}
             className="accent-blue-500 rounded"
           />
-          <span>Solo con vulnerabilidades</span>
+          <span>Solo con hallazgos</span>
         </label>
 
         {/* View mode switcher */}
@@ -255,7 +256,7 @@ export default function History() {
                 <tr>
                   <th>Fecha y hora</th>
                   <th>Objetivo</th>
-                  <th>Modo</th>
+                  <th>Origen</th>
                   <th>Archivos</th>
                   <th>Severidad máx.</th>
                   <th className="text-right">C / A / M / B / I</th>
@@ -306,7 +307,11 @@ export default function History() {
                         </td>
                         <td>
                           <span className="studio-badge !text-[10px]">
-                            {h.mode === "paste" ? "Código" : "Archivos"}
+                            {h.mode === "paste"
+                              ? "Pegar código"
+                              : h.mode === "files"
+                              ? "Subir archivos"
+                              : "Repositorio GitHub"}
                           </span>
                         </td>
                         <td className="font-mono text-xs">
@@ -335,7 +340,7 @@ export default function History() {
                                 loadResult(h.id);
                                 navigate("/");
                               }}
-                              title="Cargar resultados en la consola principal"
+                              title="Cargar resultados en la consola de análisis"
                             >
                               Ver
                             </button>
@@ -401,7 +406,7 @@ export default function History() {
                   <div className="grid grid-cols-5 gap-1 text-center font-mono text-[10px] my-3">
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-rose-900/30 p-1 text-rose-400">
                       <div className="font-bold text-xs">{h.summary.critical || 0}</div>
-                      <div>Crit</div>
+                      <div>Crítico</div>
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-amber-900/30 p-1 text-amber-400">
                       <div className="font-bold text-xs">{h.summary.high || 0}</div>
@@ -409,7 +414,7 @@ export default function History() {
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-yellow-900/30 p-1 text-yellow-400">
                       <div className="font-bold text-xs">{h.summary.medium || 0}</div>
-                      <div>Med</div>
+                      <div>Medio</div>
                     </div>
                     <div className="rounded-[var(--radius-sm)] bg-[var(--studio-surface)] border border-emerald-900/30 p-1 text-emerald-400">
                       <div className="font-bold text-xs">{h.summary.low || 0}</div>
@@ -423,7 +428,7 @@ export default function History() {
 
                   <footer className="pt-2.5 border-t border-[var(--studio-border)] flex items-center justify-between gap-2">
                     <div className="text-[11px] text-[var(--studio-text-secondary)] font-mono">
-                      {h.files} archivos · {h.duration_ms} ms · {ok ? "Limpio" : `${h.severity_count} hallazgos`}
+                      {h.files} archivos · {h.duration_ms} ms · {ok ? "Código limpio" : `${h.severity_count} hallazgos`}
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -433,7 +438,7 @@ export default function History() {
                           navigate("/");
                         }}
                       >
-                        Abrir
+                        Ver
                       </button>
                       <button
                         className="studio-btn-secondary !py-1 !px-1.5 text-xs text-rose-400 hover:text-rose-300"
@@ -460,7 +465,7 @@ export default function History() {
               </div>
               <div className="flex-1">
                 <h3 className="font-display font-bold text-base text-white">
-                  Vaciar registro histórico
+                  Limpiar registro de auditorías
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
                   Se eliminarán permanentemente los <b className="text-white font-mono">{history.length}</b> registros de auditoría locales.

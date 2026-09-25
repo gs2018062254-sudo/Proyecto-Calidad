@@ -13,7 +13,6 @@ function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/analysis" element={<Navigate to="/" replace />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/about" element={<About />} />
           <Route path="/reports" element={<Reports />} />

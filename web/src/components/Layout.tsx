@@ -27,7 +27,7 @@ export default function Layout() {
             <div className="flex items-center gap-4 text-[var(--studio-text-faint)] font-mono text-[11px]">
               <span>Motor Flask MVC (5001)</span>
               <span>SARIF 2.1 Standard</span>
-              <span>8 Reglas CWE/OWASP</span>
+              <span>12 Reglas CWE/OWASP</span>
             </div>
           </footer>
         </div>

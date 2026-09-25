@@ -2,7 +2,6 @@ import { NavLink } from "react-router-dom";
 import {
   Shield,
   Home,
-  Code2,
   BookOpen,
   FileBarChart,
   History,
@@ -15,7 +14,6 @@ import {
 
 const NAV = [
   { to: "/", end: true, label: "Consola de análisis", icon: Home },
-  { to: "/analysis", label: "Editor de código", icon: Code2 },
   { to: "/rules", label: "Reglas de seguridad", icon: BookOpen },
   { to: "/reports", label: "Reportes SARIF", icon: FileBarChart },
   { to: "/history", label: "Registro de auditorías", icon: History },
@@ -76,7 +74,7 @@ export default function Sidebar() {
             </span>
           </div>
           <div className="text-[11px] text-[var(--studio-text-secondary)]">
-            8 reglas activas · Taint flow
+            12 reglas activas · Taint flow
           </div>
         </div>
 

@@ -34,7 +34,7 @@ export default function Topbar() {
             className="studio-btn-secondary !text-xs !py-1 !px-2.5 inline-flex items-center gap-1.5"
           >
             <Activity size={13} className="text-blue-400" />
-            <span>8 reglas</span>
+            <span>12 reglas</span>
           </Link>
         </div>
       </div>

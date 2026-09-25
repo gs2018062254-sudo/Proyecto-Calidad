@@ -31,15 +31,18 @@ def scan():
 
 # Endpoints de integración con GitHub
 @api_bp.route("/api/github/user", methods=["GET"])
+@api_bp.route("/github/user", methods=["GET"])
 def github_user():
     return GitHubController.get_user()
 
 
 @api_bp.route("/api/github/repos", methods=["GET"])
+@api_bp.route("/github/repos", methods=["GET"])
 def github_repos():
     return GitHubController.list_repos()
 
 
 @api_bp.route("/api/github/scan", methods=["POST"])
+@api_bp.route("/github/scan", methods=["POST"])
 def github_scan():
     return GitHubController.scan_repo()

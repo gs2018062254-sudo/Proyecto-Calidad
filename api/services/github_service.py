@@ -163,23 +163,44 @@ class GitHubService:
         owner = cls.validate_identifier(owner, "propietario")
         repo = cls.validate_identifier(repo, "repositorio")
 
-        ref_part = f"/{ref.strip()}" if ref and ref.strip() else ""
-        url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball{ref_part}"
+        clean_ref = ref.strip() if ref and ref.strip() else None
+        candidate_urls = []
+        if token and token.strip():
+            ref_part = f"/{clean_ref}" if clean_ref else ""
+            candidate_urls.append(f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball{ref_part}")
+        else:
+            # En entornos serverless (Vercel/AWS) las IPs compartidas sufren rate-limit (403) en api.github.com;
+            # usar primero la descarga directa de archivo ZIP de GitHub (codeload) que no consume rate-limit de API.
+            if clean_ref:
+                candidate_urls.append(f"https://github.com/{owner}/{repo}/archive/refs/heads/{clean_ref}.zip")
+                candidate_urls.append(f"https://github.com/{owner}/{repo}/archive/{clean_ref}.zip")
+                candidate_urls.append(f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball/{clean_ref}")
+            else:
+                candidate_urls.append(f"https://github.com/{owner}/{repo}/archive/HEAD.zip")
+                candidate_urls.append(f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball")
 
-        resp = requests.get(
-            url,
-            headers=cls._headers(token),
-            stream=True,
-            timeout=30,
-            allow_redirects=True,
-        )
+        resp = None
+        last_status = 500
+        for url in candidate_urls:
+            r = requests.get(
+                url,
+                headers=cls._headers(token),
+                stream=True,
+                timeout=30,
+                allow_redirects=True,
+            )
+            last_status = r.status_code
+            if r.status_code == 200:
+                resp = r
+                break
+            r.close()
 
-        if resp.status_code == 404:
-            raise FileNotFoundError(f"Rama o repositorio '{owner}/{repo}' no encontrado.")
-        if resp.status_code == 401:
-            raise PermissionError("Token no autorizado para descargar este repositorio.")
-        if resp.status_code != 200:
-            raise RuntimeError(f"Fallo al descargar zipball de GitHub: HTTP {resp.status_code}")
+        if resp is None:
+            if last_status == 404:
+                raise FileNotFoundError(f"Rama o repositorio '{owner}/{repo}' no encontrado.")
+            if last_status == 401:
+                raise PermissionError("Token no autorizado para descargar este repositorio.")
+            raise RuntimeError(f"Fallo al descargar zipball de GitHub: HTTP {last_status}")
 
         buffer = io.BytesIO()
         downloaded = 0

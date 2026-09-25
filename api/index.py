@@ -21,31 +21,13 @@ if _PROJECT_ROOT not in sys.path:
 from api.app import create_app
 from api.services.rules_service import RulesService
 
-# Instancia principal de la aplicación Flask
+# Instancia principal de la aplicación Flask (detectada automáticamente como WSGI por @vercel/python)
 app = create_app()
 
 
 def get_engine(config=None):
     """Acceso compatible hacia atrás al motor SAST."""
     return RulesService.get_engine(config)
-
-
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Adaptador para el runtime de Vercel Serverless (WSGI bridge)."""
-    from werkzeug.wrappers import Request
-    from werkzeug.middleware.proxy_fix import ProxyFix
-
-    app_wsgi = ProxyFix(app)
-    req = Request(event)
-    resp = req.get_response(app_wsgi)
-    body = resp.get_data()
-    if isinstance(body, bytes):
-        body = body.decode("utf-8", errors="replace")
-    return {
-        "statusCode": resp.status_code,
-        "headers": dict(resp.headers),
-        "body": body,
-    }
 
 
 if __name__ == "__main__":

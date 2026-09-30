@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Servicio de autenticación: JWT stateless, OAuth 2.0 GitHub y cuentas demo fallback."""
+"""Servicio de autenticación: JWT stateless, OAuth 2.0 Google y cuentas demo fallback."""
 
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 @lru_cache(maxsize=1)
 def _getenv(name: str, default: Optional[str] = None) -> Optional[str]:
-    """Cache simple de variables de entorno (no cambian en runtime)."""
     val = os.environ.get(name)
     if val is None or val == "":
         return default
@@ -33,28 +32,27 @@ JWT_EXPIRATION_HOURS = 24
 
 
 def get_jwt_secret() -> str:
-    """Devuelve JWT_SECRET. En producción falla si falta; en dev usa fallback."""
+    """Devuelve JWT_SECRET. En producción avisa si es fallback."""
     secret = _getenv("JWT_SECRET")
     if secret and secret != "dev-secret-change-me-please-123456":
         return secret
     debug = _getenv("DEBUG", "0") in ("1", "true", "True")
     if not debug and not secret:
         print("⚠️  [AUTH] JWT_SECRET no configurada en entorno. Establece una clave fuerte en producción.")
-    # Fallback sólo para dev/testing
     return secret or "dev-secret-change-me-please-123456"
 
 
 def get_oauth_credentials() -> Tuple[Optional[str], Optional[str]]:
-    """Retorna (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) o (None, None) si no están."""
-    cid = _getenv("GITHUB_CLIENT_ID")
-    csec = _getenv("GITHUB_CLIENT_SECRET")
+    """Retorna (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) o (None, None) si no están."""
+    cid = _getenv("GOOGLE_CLIENT_ID")
+    csec = _getenv("GOOGLE_CLIENT_SECRET")
     if cid and csec:
         return cid, csec
     return None, None
 
 
 def get_oauth_redirect_uri(request_host: Optional[str] = None) -> Optional[str]:
-    """URI de callback para OAuth GitHub. Primero variable explícita, luego auto detectar."""
+    """URI de callback para OAuth Google. Primero variable explícita, luego auto-detectar."""
     explicit = _getenv("OAUTH_REDIRECT_URI")
     if explicit:
         return explicit.rstrip("/")
@@ -66,7 +64,6 @@ def get_oauth_redirect_uri(request_host: Optional[str] = None) -> Optional[str]:
 
 # ==========================================================================
 # Cuentas Demo (Fallback para testing / entorno sin OAuth)
-# Contraseñas hasheadas con Werkzeug PBKDF2 (nunca en claro)
 # ==========================================================================
 
 def _demo_pw(pw: str) -> str:
@@ -121,7 +118,6 @@ def user_to_public(user: Dict[str, Any]) -> Dict[str, Any]:
 # ==========================================================================
 
 def generate_jwt(user: Dict[str, Any], expires_hours: int = JWT_EXPIRATION_HOURS) -> str:
-    """Crea un JWT firmado HS256 con datos del usuario (sin password_hash)."""
     public = user_to_public(user)
     now = datetime.now(timezone.utc)
     payload = {
@@ -139,7 +135,6 @@ def generate_jwt(user: Dict[str, Any], expires_hours: int = JWT_EXPIRATION_HOURS
 
 
 def verify_jwt(token: str) -> Optional[Dict[str, Any]]:
-    """Valida signature + exp; retorna payload o None si inválido."""
     if not token or not isinstance(token, str):
         return None
     try:
@@ -155,14 +150,14 @@ def verify_jwt(token: str) -> Optional[Dict[str, Any]]:
 
 
 # ==========================================================================
-# OAuth 2.0 GitHub
+# OAuth 2.0 Google (OpenID Connect — Google Sign-In más rápido y popular)
+#   Docs: https://developers.google.com/identity/protocols/oauth2/web-server
 # ==========================================================================
 
-GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
-GITHUB_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
-GITHUB_USER_URL = "https://api.github.com/user"
-GITHUB_USER_EMAILS_URL = "https://api.github.com/user/emails"
-GITHUB_SCOPES = "read:user user:email"
+GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_ACCESS_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+GOOGLE_SCOPES = "openid email profile"
 
 
 def generate_oauth_state() -> str:
@@ -170,98 +165,96 @@ def generate_oauth_state() -> str:
     return secrets.token_urlsafe(24)
 
 
-def get_github_oauth_url(state: str, redirect_uri: Optional[str]) -> Optional[str]:
-    """Construye URL /authorize de GitHub. Retorna None si OAuth deshabilitado."""
+def generate_pkce_verifier() -> str:
+    """PKCE code_verifier (recomendado para SPA-friendly OAuth 2.1)."""
+    return secrets.token_urlsafe(64)
+
+
+def get_google_oauth_url(state: str, redirect_uri: Optional[str]) -> Optional[str]:
+    """Construye URL /authorize de Google. Retorna None si OAuth deshabilitado."""
     client_id, _ = get_oauth_credentials()
     if not client_id:
         return None
     params = [
         f"client_id={client_id}",
         "response_type=code",
-        f"scope={GITHUB_SCOPES}",
+        f"scope={GOOGLE_SCOPES}",
         f"state={state}",
-        "allow_signup=true",
+        "access_type=offline",
+        "prompt=consent",
+        "include_granted_scopes=true",
     ]
     if redirect_uri:
         params.append(f"redirect_uri={redirect_uri}")
-    return GITHUB_AUTHORIZE_URL + "?" + "&".join(params)
+    return GOOGLE_AUTHORIZE_URL + "?" + "&".join(params)
 
 
-def exchange_github_code(code: str, redirect_uri: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Intercambia `code` por access_token y luego obtiene perfil del usuario.
+def exchange_google_code(code: str, redirect_uri: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Intercambia `code` por access_token → userinfo → user dict (role=user, provider=google).
     Retorna: (user_dict | None, error_msg | None)
     """
     client_id, client_secret = get_oauth_credentials()
     if not client_id or not client_secret:
-        return None, "OAuth GitHub deshabilitado en este servidor."
+        return None, "OAuth Google deshabilitado en este servidor. Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET."
 
     if not code or not isinstance(code, str) or not code.strip():
         return None, "Parámetro code vacío o inválido."
 
     try:
-        # 1) Obtener access_token
+        # 1) Intercambiar code → access_token + id_token
         tok_payload: Dict[str, Any] = {
             "client_id": client_id,
             "client_secret": client_secret,
             "code": code.strip(),
+            "grant_type": "authorization_code",
         }
         if redirect_uri:
             tok_payload["redirect_uri"] = redirect_uri
 
         tok_resp = requests.post(
-            GITHUB_ACCESS_TOKEN_URL,
-            json=tok_payload,
+            GOOGLE_ACCESS_TOKEN_URL,
+            data=tok_payload,
             headers={"Accept": "application/json", "User-Agent": "sast-studio"},
             timeout=20,
         )
         if tok_resp.status_code != 200:
-            return None, f"GitHub token endpoint falló (HTTP {tok_resp.status_code})."
+            return None, f"Google token endpoint falló (HTTP {tok_resp.status_code}): {tok_resp.text[:120]}"
         tok_json = tok_resp.json()
         access_token = tok_json.get("access_token")
         if not access_token or "error" in tok_json:
-            return None, tok_json.get("error_description") or "No se obtuvo access_token de GitHub."
+            return None, tok_json.get("error_description") or "No se obtuvo access_token de Google."
 
-        # 2) Obtener perfil básico
+        # 2) Obtener perfil (userinfo OpenID Connect)
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": "application/json",
             "User-Agent": "sast-studio",
         }
-        user_resp = requests.get(GITHUB_USER_URL, headers=headers, timeout=15)
-        if user_resp.status_code != 200:
-            return None, f"GitHub /user endpoint falló (HTTP {user_resp.status_code})."
-        gh_user = user_resp.json()
+        info_resp = requests.get(GOOGLE_USERINFO_URL, headers=headers, timeout=15)
+        if info_resp.status_code != 200:
+            return None, f"Google userinfo endpoint falló (HTTP {info_resp.status_code})."
+        google_user = info_resp.json()
 
-        # 3) Si email es privado (null), consultar /user/emails
-        email = gh_user.get("email")
-        if not email:
-            try:
-                emails_resp = requests.get(GITHUB_USER_EMAILS_URL, headers=headers, timeout=15)
-                if emails_resp.status_code == 200:
-                    for e in emails_resp.json():
-                        if e.get("primary") and e.get("verified"):
-                            email = e.get("email")
-                            break
-                    if not email and emails_resp.json():
-                        email = emails_resp.json()[0].get("email")
-            except Exception:
-                pass
+        email = google_user.get("email") or ""
+        email_verified = bool(google_user.get("email_verified", False))
+        if not email_verified or not email:
+            return None, "Google no devolvió un correo verificado."
 
-        if not email:
-            email = f"{gh_user.get('login', 'github-user')}+noreply@github.com"
+        name = google_user.get("name") or google_user.get("given_name") or email
+        avatar_url = google_user.get("picture", "")
+        sub = google_user.get("sub") or f"google|{email}"
 
         user_obj = {
-            "sub": f"github|{gh_user.get('id') or gh_user.get('login')}",
+            "sub": f"google|{sub}",
             "email": email,
-            "name": gh_user.get("name") or gh_user.get("login") or "Usuario GitHub",
-            "avatar_url": gh_user.get("avatar_url", ""),
-            "provider": "github",
+            "name": name,
+            "avatar_url": avatar_url,
+            "provider": "google",
             "role": "user",
-            "github_login": gh_user.get("login"),
-            "github_html_url": gh_user.get("html_url"),
+            "google_email_verified": True,
         }
         return user_obj, None
     except requests.RequestException as exc:
-        return None, f"Error de red al contactar GitHub: {exc.__class__.__name__}"
+        return None, f"Error de red al contactar Google: {exc.__class__.__name__}"
     except Exception as exc:  # pragma: no cover - safety net
-        return None, f"Error inesperado OAuth: {exc.__class__.__name__}"
+        return None, f"Error inesperado OAuth Google: {exc.__class__.__name__}"

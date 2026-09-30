@@ -27,17 +27,17 @@ def health():
     return HealthController.check_health()
 
 
-# -------- Autenticación --------
+# -------- Autenticación (Google Sign-In rápido) --------
 @api_bp.route("/api/auth/login", methods=["GET"])
 @api_bp.route("/auth/login", methods=["GET"])
 def auth_login():
-    return AuthController.github_login()
+    return AuthController.google_login()
 
 
 @api_bp.route("/api/auth/callback", methods=["GET"])
 @api_bp.route("/auth/callback", methods=["GET"])
 def auth_callback():
-    return AuthController.github_callback()
+    return AuthController.google_callback()
 
 
 @api_bp.route("/api/auth/demo-login", methods=["POST"])

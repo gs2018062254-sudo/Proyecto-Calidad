@@ -138,9 +138,11 @@ export default function Topbar() {
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       <span className={clsx(
                         "px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider",
-                        currentUser.provider === "github"
-                          ? "bg-slate-700/60 text-slate-200"
-                          : "bg-blue-500/15 text-blue-300",
+                        currentUser.provider === "google"
+                          ? "bg-red-500/15 text-red-300"
+                          : currentUser.provider === "github"
+                            ? "bg-slate-700/60 text-slate-200"
+                            : "bg-blue-500/15 text-blue-300",
                       )}>
                         {currentUser.provider}
                       </span>

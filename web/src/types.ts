@@ -140,7 +140,7 @@ export interface ScanOptions {
 // Autenticación / Sesión
 // ==========================================================================
 
-export type AuthProvider = "github" | "demo" | "unknown";
+export type AuthProvider = "google" | "github" | "demo" | "unknown";
 
 export interface AuthUser {
   sub: string;
@@ -151,13 +151,14 @@ export interface AuthUser {
   role?: string;
   github_login?: string;
   github_html_url?: string;
+  google_email_verified?: boolean;
 }
 
 export interface DemoLoginResponse {
   ok: boolean;
   token: string;
   user: AuthUser;
-  auth_type: "demo" | "github";
+  auth_type: "demo" | "google" | "github";
   expires_in_hours: number;
 }
 

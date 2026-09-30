@@ -25,7 +25,7 @@ import {
   fetchMe,
   getStoredToken,
   getStoredUser,
-  githubLoginUrl,
+  googleLoginUrl,
   hydrateAuthFromStorage,
   isTokenExpired,
   loginDemo as apiLoginDemo,
@@ -177,6 +177,7 @@ export interface SastStore {
   hydrateAuth: () => Promise<void>;
   loginDemo: (email: string, password: string) => Promise<void>;
   loginWithGithub: () => void;
+  loginWithGoogle: () => void;
   handleOAuthCallbackFromUrl: () => Promise<{ ok: boolean; redirected?: boolean; error?: string }>;
   logout: () => Promise<void>;
   // GitHub integration state & actions
@@ -333,11 +334,15 @@ export const useSastStore = create<SastStore>((set, get) => {
       }
     },
 
-    loginWithGithub: () => {
+    loginWithGoogle: () => {
       try {
         saveRedirect(window.location.pathname + window.location.search + window.location.hash);
       } catch {}
-      window.location.assign(githubLoginUrl());
+      window.location.assign(googleLoginUrl());
+    },
+
+    loginWithGithub: () => {
+      get().loginWithGoogle();
     },
 
     handleOAuthCallbackFromUrl: async () => {
@@ -362,7 +367,7 @@ export const useSastStore = create<SastStore>((set, get) => {
             name: name || "Usuario",
             email: "",
             avatar_url: "",
-            provider: (provider as any) || "github",
+            provider: (provider as any) || "google",
           };
           try {
             // Guardar el token para que fetchMe() lo use y validar

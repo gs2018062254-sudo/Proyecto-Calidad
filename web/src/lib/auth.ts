@@ -188,8 +188,12 @@ export async function logoutBackend(): Promise<void> {
   clearStoredAuth();
 }
 
-export function githubLoginUrl(): string {
+export function googleLoginUrl(): string {
   return API_BASE + "/api/auth/login";
+}
+
+export function githubLoginUrl(): string {
+  return googleLoginUrl();
 }
 
 // ==========================================================================

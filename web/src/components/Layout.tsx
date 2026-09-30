@@ -2,14 +2,27 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import { useSastStore } from "../store/sast";
 
 export default function Layout() {
+  const hydrateAuth = useSastStore((s) => s.hydrateAuth);
+  const currentUser = useSastStore((s) => s.currentUser);
+
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
     return () => {
       document.documentElement.style.scrollBehavior = "auto";
     };
   }, []);
+
+  // Hydrate auth state from storage + validate with /api/auth/me una sola vez
+  useEffect(() => {
+    hydrateAuth().catch(() => {});
+  }, [hydrateAuth]);
+
+  const footerSubtitle = currentUser
+    ? `Sesión: ${currentUser.provider} · ${currentUser.name}`
+    : "Motor Flask MVC (5001) · Estándar SARIF 2.1";
 
   return (
     <div className="min-h-screen bg-[var(--studio-bg)] text-[var(--studio-text)]">
@@ -28,6 +41,7 @@ export default function Layout() {
               <span>Motor Flask MVC (5001)</span>
               <span>Estándar SARIF 2.1</span>
               <span>12 reglas activas (CWE / OWASP)</span>
+              {currentUser && <span className="text-blue-400 truncate max-w-[220px]">{footerSubtitle}</span>}
             </div>
           </footer>
         </div>

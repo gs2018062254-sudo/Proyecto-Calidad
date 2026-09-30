@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  AuthUser,
   FindingDto,
   GitHubRepo,
   GitHubUser,
@@ -18,6 +19,20 @@ import {
   fetchGitHubRepos,
   runGitHubScan as apiRunGitHubScan,
 } from "../lib/api";
+import {
+  clearStoredAuth,
+  consumeRedirect,
+  fetchMe,
+  getStoredToken,
+  getStoredUser,
+  githubLoginUrl,
+  hydrateAuthFromStorage,
+  isTokenExpired,
+  loginDemo as apiLoginDemo,
+  logoutBackend,
+  saveRedirect,
+  saveStoredAuth,
+} from "../lib/auth";
 import { DEMO_SOURCE } from "../lib/demo";
 import { formatForFilename, nowISO } from "../lib/datetime";
 
@@ -151,6 +166,19 @@ export interface SastStore {
   activeFile: string;
   history: HistoryEntry[];
   startedAt?: string;
+  // ======================================================================
+  // Auth state
+  // ======================================================================
+  authHydrated: boolean;
+  authToken: string | null;
+  currentUser: AuthUser | null;
+  authError: string | null;
+  authLoading: boolean;
+  hydrateAuth: () => Promise<void>;
+  loginDemo: (email: string, password: string) => Promise<void>;
+  loginWithGithub: () => void;
+  handleOAuthCallbackFromUrl: () => Promise<{ ok: boolean; redirected?: boolean; error?: string }>;
+  logout: () => Promise<void>;
   // GitHub integration state & actions
   githubToken: string | null;
   githubUser: GitHubUser | null;
@@ -219,6 +247,16 @@ export const useSastStore = create<SastStore>((set, get) => {
     });
   }
 
+  const initialAuth = (() => {
+    // Sync initial sin async. Luego hydrateAuth() valida contra /api/auth/me.
+    try {
+      const tok = getStoredToken();
+      const usr = getStoredUser();
+      if (tok && !isTokenExpired(tok) && usr) return { authToken: tok, currentUser: usr };
+    } catch {}
+    return { authToken: null, currentUser: null };
+  })();
+
   return {
     mode: "paste",
     pasteValue: "",
@@ -233,6 +271,12 @@ export const useSastStore = create<SastStore>((set, get) => {
     expandedFindingId: null,
     activeFile: "",
     history: loadHistoryPersisted(),
+    // Auth initial state (sync hydrate)
+    authHydrated: false,
+    authToken: initialAuth.authToken,
+    currentUser: initialAuth.currentUser,
+    authError: null,
+    authLoading: false,
     // GitHub initial state
     githubToken: loadGithubToken(),
     githubUser: loadGithubUser(),
@@ -242,6 +286,140 @@ export const useSastStore = create<SastStore>((set, get) => {
     selectedRepo: null,
     selectedBranch: "main",
     githubPublicRepoInput: "",
+
+    // ==================================================================
+    // Auth actions
+    // ==================================================================
+    hydrateAuth: async () => {
+      if (get().authHydrated) return;
+      const { token, user } = hydrateAuthFromStorage();
+      if (token && user) {
+        // Opcional: validar llamando a /api/auth/me; si falla, borramos
+        try {
+          const me = await fetchMe();
+          set({
+            authHydrated: true,
+            authToken: token,
+            currentUser: me.user || user,
+            authError: null,
+          });
+          return;
+        } catch {
+          clearStoredAuth();
+        }
+      }
+      set({ authHydrated: true, authToken: null, currentUser: null });
+    },
+
+    loginDemo: async (email, password) => {
+      set({ authLoading: true, authError: null });
+      try {
+        const res = await apiLoginDemo(email.trim(), password);
+        saveStoredAuth(res.token, res.user);
+        set({
+          authLoading: false,
+          authToken: res.token,
+          currentUser: res.user,
+          authError: null,
+        });
+      } catch (e: any) {
+        set({
+          authLoading: false,
+          authToken: null,
+          currentUser: null,
+          authError: e?.message || "No se pudo iniciar sesión.",
+        });
+        throw e;
+      }
+    },
+
+    loginWithGithub: () => {
+      try {
+        saveRedirect(window.location.pathname + window.location.search + window.location.hash);
+      } catch {}
+      window.location.assign(githubLoginUrl());
+    },
+
+    handleOAuthCallbackFromUrl: async () => {
+      if (typeof window === "undefined") return { ok: false };
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("auth_token");
+      const name = params.get("auth_user");
+      const provider = params.get("auth_provider");
+      const err = params.get("auth_error");
+      if (err) {
+        set({ authError: err, authLoading: false });
+        // Limpiar URL
+        window.history.replaceState({}, document.title, "/login");
+        return { ok: false, error: err };
+      }
+      if (token) {
+        try {
+          set({ authLoading: true, authError: null });
+          // Construir user mínimo desde params + luego fetchMe()
+          const basicUser: AuthUser = {
+            sub: provider ? `${provider}|${Date.now()}` : `oauth|${Date.now()}`,
+            name: name || "Usuario",
+            email: "",
+            avatar_url: "",
+            provider: (provider as any) || "github",
+          };
+          try {
+            // Guardar el token para que fetchMe() lo use y validar
+            saveStoredAuth(token, basicUser);
+            const me = await fetchMe();
+            saveStoredAuth(token, me.user);
+            set({
+              authToken: token,
+              currentUser: me.user,
+              authLoading: false,
+              authError: null,
+            });
+          } catch {
+            set({
+              authToken: token,
+              currentUser: basicUser,
+              authLoading: false,
+            });
+          }
+          const next = consumeRedirect() || "/";
+          window.history.replaceState({}, document.title, next);
+          if (typeof window !== "undefined") {
+            try { (window.location as any).pathname !== next && (window.location.pathname = next); } catch {}
+          }
+          return { ok: true, redirected: true };
+        } catch (e: any) {
+          set({
+            authToken: null,
+            currentUser: null,
+            authLoading: false,
+            authError: e?.message || "Fallo al procesar login con GitHub.",
+          });
+          return { ok: false, error: e?.message };
+        }
+      }
+      return { ok: false };
+    },
+
+    logout: async () => {
+      await logoutBackend();
+      set({
+        authToken: null,
+        currentUser: null,
+        authError: null,
+        githubToken: null,
+        githubUser: null,
+      });
+      if (typeof window !== "undefined") {
+        try {
+          // Redirigir a login después de cerrar sesión
+          const p = window.location.pathname;
+          if (p !== "/login") {
+            window.location.pathname = "/login";
+          }
+        } catch {}
+      }
+    },
 
     setMode: (m) => {
       try {

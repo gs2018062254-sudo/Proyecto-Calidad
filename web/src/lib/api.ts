@@ -1,4 +1,5 @@
 import type { ScanResponse, RuleDto } from "../types";
+import { authFetch } from "./auth";
 
 export const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "";
 
@@ -42,13 +43,13 @@ export async function runScan(p: ScanParams): Promise<ScanResponse> {
     form.set("exclude_tests", p.exclude_tests ? "true" : "false");
     if (p.include_sarif) form.set("include_sarif", "true");
     if (p.include_html) form.set("include_html", "true");
-    return request<ScanResponse>("/api/scan", {
+    return authFetch<ScanResponse>("/api/scan", {
       method: "POST",
       body: form,
     });
   }
 
-  return request<ScanResponse>("/api/scan", {
+  return authFetch<ScanResponse>("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -64,7 +65,9 @@ export async function runScan(p: ScanParams): Promise<ScanResponse> {
 }
 
 export async function fetchRules(): Promise<RuleDto[]> {
-  const r = await request<{ ok: boolean; rules: RuleDto[] }>("/api/rules");
+  const r = await authFetch<{ ok: boolean; rules: RuleDto[] }>("/api/rules", {
+    method: "GET",
+  });
   return r.rules || [];
 }
 
@@ -95,7 +98,7 @@ export function downloadFile(filename: string, content: string, mime: string) {
 // ==========================================
 
 export async function fetchGitHubUser(token: string): Promise<import("../types").GitHubUser> {
-  const res = await request<{ ok: boolean; user: import("../types").GitHubUser }>("/api/github/user", {
+  const res = await authFetch<{ ok: boolean; user: import("../types").GitHubUser }>("/api/github/user", {
     headers: {
       Authorization: `Bearer ${token.trim()}`,
     },
@@ -117,7 +120,7 @@ export async function fetchGitHubRepos(
   q.set("page", String(page));
   q.set("per_page", "50");
 
-  const res = await request<{ ok: boolean; repos: import("../types").GitHubRepo[] }>(
+  const res = await authFetch<{ ok: boolean; repos: import("../types").GitHubRepo[] }>(
     `/api/github/repos?${q.toString()}`,
     { headers },
   );
@@ -136,7 +139,7 @@ export interface GitHubScanParams {
 }
 
 export async function runGitHubScan(p: GitHubScanParams): Promise<ScanResponse> {
-  return request<ScanResponse>("/api/github/scan", {
+  return authFetch<ScanResponse>("/api/github/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

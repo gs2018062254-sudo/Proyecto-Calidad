@@ -135,3 +135,33 @@ export interface ScanOptions {
   ruleset?: string;
   report_formats: ReportFormat[];
 }
+
+// ==========================================================================
+// Autenticación / Sesión
+// ==========================================================================
+
+export type AuthProvider = "github" | "demo" | "unknown";
+
+export interface AuthUser {
+  sub: string;
+  email?: string;
+  name: string;
+  avatar_url: string;
+  provider: AuthProvider;
+  role?: string;
+  github_login?: string;
+  github_html_url?: string;
+}
+
+export interface DemoLoginResponse {
+  ok: boolean;
+  token: string;
+  user: AuthUser;
+  auth_type: "demo" | "github";
+  expires_in_hours: number;
+}
+
+export interface MeResponse {
+  ok: boolean;
+  user: AuthUser;
+}

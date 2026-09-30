@@ -15,6 +15,11 @@ ENV/
 .Python
 .pytest_cache/
 
+# === Environment / Secrets ===
+.env
+.env.local
+.env.*.local
+
 # === IDE / Editor ===
 .vscode/
 .idea/
